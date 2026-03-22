@@ -96,6 +96,9 @@ All specs live in `docs/brain/06-Specs/`:
   structure, component map, store design, and conventions.
 - **TESTING-STRATEGY.md** -- Test infrastructure, coverage
   targets, and patterns for every test type.
+- **protocol-schema.json** -- Machine-readable schema for all
+  36 WebSocket message types with field definitions. Located
+  at `docs/protocol-schema.json`.
 
 ## Project Structure
 
@@ -103,21 +106,32 @@ All specs live in `docs/brain/06-Specs/`:
 OwnCord/
 ├── Server/                  # Go server (implemented)
 │   ├── config/
-│   ├── db/
+│   ├── db/                  # + errors.go (sentinel errors)
 │   ├── auth/
-│   ├── api/
-│   ├── ws/
+│   ├── api/                 # + metrics_handler.go
+│   ├── ws/                  # Split: voice_join.go, voice_leave.go,
+│   │                        #   voice_controls.go, voice_broadcast.go,
+│   │                        #   errors.go, ringbuffer.go
 │   ├── admin/static/
-│   └── migrations/
+│   ├── migrations/
+│   └── scripts/             # voice-test.sh
 ├── Client/
 │   ├── tauri-client/        # Tauri v2 client
 │   │   ├── src-tauri/       #   Rust backend
 │   │   │   └── src/
 │   │   ├── src/             #   TypeScript frontend
-│   │   │   ├── lib/         #     Core services
+│   │   │   ├── lib/         #     Core services (incl. livekitSession.ts,
+│   │   │   │                #       disposable.ts)
 │   │   │   ├── stores/      #     Reactive state
 │   │   │   ├── components/  #     UI components
 │   │   │   ├── pages/       #     Page layouts
+│   │   │   │   ├── ConnectPage.ts
+│   │   │   │   ├── MainPage.ts
+│   │   │   │   └── main-page/
+│   │   │   │       ├── ChannelController.ts
+│   │   │   │       ├── ChatArea.ts
+│   │   │   │       ├── SidebarArea.ts
+│   │   │   │       └── ...
 │   │   │   └── styles/      #     CSS (from mockups)
 │   │   └── tests/
 │   │       ├── unit/
@@ -175,11 +189,11 @@ go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
 ## Key Features
 
-- **Video chat**: WebRTC SFU with composite track keys
-  (`user-{id}-audio`, `user-{id}-video`). Camera
-  enable/disable triggers SDP renegotiation. VideoGrid
-  component replaces chat area when cameras are active.
-  Server enforces `MaxVideo` limit per room.
+- **Voice & video chat**: LiveKit-powered voice and video.
+  LiveKit server runs as a companion process alongside
+  `chatserver.exe`. Client connects via `livekitSession.ts`.
+  VideoGrid component replaces chat area when cameras are
+  active.
 - **GIF picker**: Tenor API v2 integration via
   `lib/tenor.ts`. Uses Google's public anonymous API key.
   Picker in MessageInput sends GIF URL as message content;
@@ -196,22 +210,27 @@ go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 - **Admin IP restriction**: `/admin` routes restricted to
   `admin_allowed_cidrs` in server config (default: private
   networks only). Middleware in `api/middleware.go`.
+- **Metrics endpoint**: `GET /api/v1/metrics` (admin IP
+  restricted) returns uptime, goroutines, heap, connected
+  users.
+- **Reconnection with state recovery**: Client tracks `seq`
+  numbers on all server broadcasts. On reconnect, sends
+  `last_seq` in auth; server replays missed events from a
+  1000-event ring buffer. Falls back to full `ready` if too
+  far behind.
+- **Heartbeat monitoring**: Server sweeps for stale
+  connections every 30s, kicks clients with no activity for
+  90s.
 
 ## Critical Rules (always apply)
 
 - **API paths**: Always `/api/v1/*` (matches server router)
-- **WS field names**: `threshold_mode` NOT `mode` in
-  VoiceConfig and VoiceSpeakers payloads
 - **Roles**: Always use role NAME strings ("admin",
   "member"), never numeric role\_id in UI-facing code
 - **Rate limiting**: Client must respect PROTOCOL.md
   limits (typing 1/3s, presence 1/10s, voice 20/s)
 - **Status values**: Only `online`, `idle`, `dnd`,
   `offline`. Never `invisible`.
-- **Video track IDs**: Use `video-{userId}` for track ID
-  and `user-{userId}-video` for stream ID. Audio uses
-  `audio-{userId}` / `user-{userId}-audio`. Never reuse
-  the old `user-{userId}` stream ID format.
 - **Tenor API key**: The key in `lib/tenor.ts` is Google's
   public anonymous key — not a secret. Do not move to env.
 
