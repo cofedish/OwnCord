@@ -117,7 +117,7 @@ OwnCord/
 │   ├── config/
 │   ├── db/                  # + errors.go (sentinel errors)
 │   ├── auth/
-│   ├── api/                 # + metrics_handler.go
+│   ├── api/                 # + metrics_handler.go, diagnostics_handler.go
 │   ├── ws/                  # Split: voice_join.go, voice_leave.go,
 │   │                        #   voice_controls.go, voice_broadcast.go,
 │   │                        #   errors.go, ringbuffer.go
@@ -130,7 +130,8 @@ OwnCord/
 │   │   │   └── src/
 │   │   ├── src/             #   TypeScript frontend
 │   │   │   ├── lib/         #     Core services (incl. livekitSession.ts,
-│   │   │   │                #       connectionStats.ts, disposable.ts)
+│   │   │   │                #       connectionStats.ts, disposable.ts,
+│   │   │   │                #       logPersistence.ts)
 │   │   │   ├── stores/      #     Reactive state
 │   │   │   ├── components/  #     UI components
 │   │   │   ├── pages/       #     Page layouts
@@ -292,6 +293,16 @@ go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
   sidebar navigation, 80vh height). Tabs: Account, Appearance,
   Notifications, Text & Images, Accessibility, Voice & Audio,
   Keybinds, Advanced, Logs.
+- **Observability & debugging**: Structured logging across all
+  layers. Server: enriched HTTP request logs (client_ip, req_id,
+  bytes), WS disconnect stats (duration, msgs sent/received/dropped,
+  voice channel), LiveKit webhook event logging. Client: JSONL log
+  persistence to disk with 5-day rotation (`lib/logPersistence.ts`),
+  LiveKit ICE candidate logging (host/srflx/relay types), room
+  lifecycle events, WS reconnection tracking. Rust proxies:
+  structured `log` crate logging for TLS handshakes, TOFU checks,
+  connection lifecycle. Cache clear buttons in Settings > Advanced.
+  Diagnostics endpoint: `GET /api/v1/diagnostics/connectivity`.
 
 ## Critical Rules (always apply)
 
