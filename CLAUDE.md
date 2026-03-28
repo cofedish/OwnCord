@@ -251,13 +251,14 @@ go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
   Client: `dm.store.ts` for state, dispatcher handles DM events,
   "+" button opens member picker to start DMs. DM header shows
   `@ username` with live status. Auto-reopen on message.
-- **Unified Sidebar Layout**: Single 240px sidebar replacing
-  Discord-style 4-column layout. Sections: Server header →
-  Search → Text Channels → Voice Channels → Direct Messages →
-  Members (drag-to-resize) → Voice Widget → User Bar.
-  Sidebar switches between "channel mode" and "DM mode" with
-  "Back to Server" header in DM mode. Invite button moved to
-  server header. Architecture in `pages/main-page/SidebarArea.ts`.
+- **Unified Sidebar Layout**: Single 240px sidebar. Sections:
+  Server header → DM Preview (top 3, bubbles on new message) →
+  Text Channels → Voice Channels → Members (collapsible,
+  persisted state) → Voice Widget → User Bar.
+  DM header shows total unread badge. "View all messages"
+  link switches to full DM mode. Members section collapses
+  to header-only bar. Architecture in
+  `pages/main-page/SidebarArea.ts`.
 - **Quick-Switch Server Overlay**: 🚪 button in UserBar opens
   overlay showing favorited servers. Click to disconnect and
   switch via sessionStorage handoff to ConnectPage.
@@ -267,6 +268,16 @@ go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
   `voice.store.ts`, rendered by 1-second interval in
   `VoiceWidget.ts`. Local-only (each user sees their own
   timer). Resets on leave/disconnect.
+- **Auto-login**: One server profile can be set as auto-login
+  (lightning bolt toggle on server cards). On startup, loads
+  saved credentials from Windows Credential Manager and
+  attempts automatic login. Falls back to login form on
+  failure or 2FA. Only one profile can be auto-login at a
+  time. Enforces `rememberPassword: true`.
+- **Server health with online users**: `GET /api/v1/health`
+  returns `online_users` count. Server cards on ConnectPage
+  show latency + online user count. Health checks repeat
+  every 15 seconds so offline servers update automatically.
 - **OC Neon Glow Theme + Theming System**: New default theme
   with cyan (#00c8ff) → purple (#7b2fff) gradient. Theme manager
   in `lib/themes.ts` supports built-in + custom themes via
