@@ -96,6 +96,18 @@ All specs live in `docs/brain/06-Specs/`:
   structure, component map, store design, and conventions.
 - **TESTING-STRATEGY.md** -- Test infrastructure, coverage
   targets, and patterns for every test type.
+- **E2E-BEST-PRACTICES.md** -- E2E test patterns: persistent
+  fixtures, login-once, selector/assertion best practices.
+- **DM-SYSTEM.md** -- Direct message system architecture,
+  server/client flows, authorization model.
+- **THEME-SYSTEM.md** -- Theming system: built-in themes,
+  custom JSON import/export, accent color, CSS injection
+  prevention.
+- **RECONNECTION.md** -- Reconnection protocol: seq numbers,
+  ring buffer replay, state recovery flow.
+- **protocol-schema.json** -- Machine-readable schema for all
+  36 WebSocket message types with field definitions. Located
+  at `docs/protocol-schema.json`.
 
 ## Project Structure
 
@@ -103,21 +115,32 @@ All specs live in `docs/brain/06-Specs/`:
 OwnCord/
 ├── Server/                  # Go server (implemented)
 │   ├── config/
-│   ├── db/
+│   ├── db/                  # + errors.go (sentinel errors)
 │   ├── auth/
-│   ├── api/
-│   ├── ws/
+│   ├── api/                 # + metrics_handler.go
+│   ├── ws/                  # Split: voice_join.go, voice_leave.go,
+│   │                        #   voice_controls.go, voice_broadcast.go,
+│   │                        #   errors.go, ringbuffer.go
 │   ├── admin/static/
-│   └── migrations/
+│   ├── migrations/
+│   └── scripts/             # voice-test.sh
 ├── Client/
 │   ├── tauri-client/        # Tauri v2 client
 │   │   ├── src-tauri/       #   Rust backend
 │   │   │   └── src/
 │   │   ├── src/             #   TypeScript frontend
-│   │   │   ├── lib/         #     Core services
+│   │   │   ├── lib/         #     Core services (incl. livekitSession.ts,
+│   │   │   │                #       connectionStats.ts, disposable.ts)
 │   │   │   ├── stores/      #     Reactive state
 │   │   │   ├── components/  #     UI components
 │   │   │   ├── pages/       #     Page layouts
+│   │   │   │   ├── ConnectPage.ts
+│   │   │   │   ├── MainPage.ts
+│   │   │   │   └── main-page/
+│   │   │   │       ├── ChannelController.ts
+│   │   │   │       ├── ChatArea.ts
+│   │   │   │       ├── SidebarArea.ts
+│   │   │   │       └── ...
 │   │   │   └── styles/      #     CSS (from mockups)
 │   │   └── tests/
 │   │       ├── unit/
@@ -133,7 +156,7 @@ OwnCord/
 
 ```bash
 cd Server
-go build -o chatserver.exe -ldflags "-s -w -X main.version=1.0.0" .
+go build -o chatserver.exe -ldflags "-s -w -X main.version=1.2.0" .
 go test ./...                        # all tests
 go test ./... -cover                 # with coverage
 ```
@@ -142,6 +165,9 @@ go test ./... -cover                 # with coverage
 
 ```bash
 cd Client/tauri-client
+
+# Install dependencies (first time only)
+npm install
 
 # Development (hot reload)
 npm run tauri dev
@@ -153,8 +179,12 @@ npm run tauri build
 npm test                             # all tests (vitest)
 npm run test:unit                    # unit tests only
 npm run test:integration             # integration tests
-npm run test:e2e                     # Playwright E2E tests
-npm run test:coverage                # with coverage report
+npm run test:e2e                     # Playwright E2E (mocked Tauri)
+npm run test:e2e:native              # Playwright E2E (real Tauri exe + CDP)
+npm run test:e2e:prod                # Playwright E2E (prod build)
+npm run test:e2e:ui                  # Playwright UI mode
+npm run test:watch                   # watch mode for tests
+npm run test:coverage                # coverage report
 ```
 
 ### Dev Tools
@@ -175,11 +205,11 @@ go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
 ## Key Features
 
-- **Video chat**: WebRTC SFU with composite track keys
-  (`user-{id}-audio`, `user-{id}-video`). Camera
-  enable/disable triggers SDP renegotiation. VideoGrid
-  component replaces chat area when cameras are active.
-  Server enforces `MaxVideo` limit per room.
+- **Voice & video chat**: LiveKit-powered voice and video.
+  LiveKit server runs as a companion process alongside
+  `chatserver.exe`. Client connects via `livekitSession.ts`.
+  VideoGrid component replaces chat area when cameras are
+  active.
 - **GIF picker**: Tenor API v2 integration via
   `lib/tenor.ts`. Uses Google's public anonymous API key.
   Picker in MessageInput sends GIF URL as message content;
@@ -191,29 +221,95 @@ go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 - **Desktop notifications**: `lib/notifications.ts` — Tauri
   plugin-notification with Web Notification API fallback.
   Taskbar flash, notification sound, @everyone suppression.
+- **Connection quality indicator**: Signal-bars icon +
+  ping text in VoiceWidget header. Clicking it expands a
+  transport statistics pane (outgoing/incoming rates,
+  packets, RTT, session totals). Polls WebRTC stats every
+  2s via `lib/connectionStats.ts`. Color-coded: green
+  (<100ms), yellow (100-200ms), red (>200ms).
 - **Compact mode**: CSS class `.compact-mode` on body
   reduces spacing, avatar sizes, and font sizes throughout.
 - **Admin IP restriction**: `/admin` routes restricted to
   `admin_allowed_cidrs` in server config (default: private
   networks only). Middleware in `api/middleware.go`.
+- **Metrics endpoint**: `GET /api/v1/metrics` (admin IP
+  restricted) returns uptime, goroutines, heap, connected
+  users.
+- **Reconnection with state recovery**: Client tracks `seq`
+  numbers on all server broadcasts. On reconnect, sends
+  `last_seq` in auth; server replays missed events from a
+  1000-event ring buffer. Falls back to full `ready` if too
+  far behind.
+- **Heartbeat monitoring**: Server sweeps for stale
+  connections every 30s, kicks clients with no activity for
+  90s.
+- **Direct Messages (1-on-1)**: Full-stack DM implementation.
+  Server: `db/dm_queries.go` with GetOrCreateDMChannel,
+  GetUserDMChannels, OpenDM, CloseDM. REST: `POST /api/v1/dms`,
+  `GET /api/v1/dms`, `DELETE /api/v1/dms/{channelId}`.
+  WebSocket DM events: `dm_channel_open`, `dm_channel_close`.
+  Client: `dm.store.ts` for state, dispatcher handles DM events,
+  "+" button opens member picker to start DMs. DM header shows
+  `@ username` with live status. Auto-reopen on message.
+- **Unified Sidebar Layout**: Single 240px sidebar. Sections:
+  Server header → DM Preview (top 3, bubbles on new message) →
+  Text Channels → Voice Channels → Members (collapsible,
+  persisted state) → Voice Widget → User Bar.
+  DM header shows total unread badge. "View all messages"
+  link switches to full DM mode. Members section collapses
+  to header-only bar. Architecture in
+  `pages/main-page/SidebarArea.ts`.
+- **Quick-Switch Server Overlay**: 🚪 button in UserBar opens
+  overlay showing favorited servers. Click to disconnect and
+  switch via sessionStorage handoff to ConnectPage.
+  Component: `QuickSwitchOverlay.ts`.
+- **Voice call duration timer**: Elapsed time counter in
+  VoiceWidget (MM:SS / HH:MM:SS). Stored as `joinedAt` in
+  `voice.store.ts`, rendered by 1-second interval in
+  `VoiceWidget.ts`. Local-only (each user sees their own
+  timer). Resets on leave/disconnect.
+- **Auto-login**: One server profile can be set as auto-login
+  (lightning bolt toggle on server cards). On startup, loads
+  saved credentials from Windows Credential Manager and
+  attempts automatic login. Falls back to login form on
+  failure or 2FA. Only one profile can be auto-login at a
+  time. Enforces `rememberPassword: true`.
+- **Server health with online users**: `GET /api/v1/health`
+  returns `online_users` count. Server cards on ConnectPage
+  show latency + online user count. Health checks repeat
+  every 15 seconds so offline servers update automatically.
+- **OC Neon Glow Theme + Theming System**: New default theme
+  with cyan (#00c8ff) → purple (#7b2fff) gradient. Theme manager
+  in `lib/themes.ts` supports built-in + custom themes via
+  JSON import/export. Accent color picker overrides theme accent.
+  Theme file: `theme-neon-glow.css`. Restored on app startup
+  (both theme class and accent color override).
+- **Discord-style Settings Panel**: Centered floating panel with
+  blurred backdrop (8px blur), rounded corners (12px), scale
+  animation on open, and click-outside-to-close behavior.
+  Component: `components/SettingsOverlay.ts`. CSS: `.settings-overlay`
+  (full-screen backdrop) and `.settings-panel` (900px wide card with
+  sidebar navigation, 80vh height). Tabs: Account, Appearance,
+  Notifications, Text & Images, Accessibility, Voice & Audio,
+  Keybinds, Advanced, Logs.
 
 ## Critical Rules (always apply)
 
 - **API paths**: Always `/api/v1/*` (matches server router)
-- **WS field names**: `threshold_mode` NOT `mode` in
-  VoiceConfig and VoiceSpeakers payloads
 - **Roles**: Always use role NAME strings ("admin",
   "member"), never numeric role\_id in UI-facing code
 - **Rate limiting**: Client must respect PROTOCOL.md
   limits (typing 1/3s, presence 1/10s, voice 20/s)
 - **Status values**: Only `online`, `idle`, `dnd`,
   `offline`. Never `invisible`.
-- **Video track IDs**: Use `video-{userId}` for track ID
-  and `user-{userId}-video` for stream ID. Audio uses
-  `audio-{userId}` / `user-{userId}-audio`. Never reuse
-  the old `user-{userId}` stream ID format.
 - **Tenor API key**: The key in `lib/tenor.ts` is Google's
   public anonymous key — not a secret. Do not move to env.
+- **DM authorization**: DM channels use `IsDMParticipant`
+  checks instead of role-based permissions. Every handler
+  that touches a channel must branch on `ch.Type == "dm"`
+  and verify participant membership. This applies to WS
+  handlers (channel_focus, typing, chat_send, edit, delete,
+  reaction) and REST handlers (GET messages, pins).
 
 ## Conventions & Details (see canonical files in docs/brain/)
 
