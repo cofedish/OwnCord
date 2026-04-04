@@ -1,0 +1,14 @@
+.git
+.github
+.vscode
+node_modules
+Client/tauri-client/node_modules
+Client/tauri-client/dist
+Client/tauri-client/src-tauri/target
+Server/bin
+Server/coverage.out
+Server/testdata
+deploy/runtime/data
+*.log
+*.tmp
+

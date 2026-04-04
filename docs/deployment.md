@@ -1,5 +1,12 @@
 # Deployment Guide
 
+For the maintained Linux/container path, use:
+
+- [Docker Deployment](./docker-deployment.md)
+- [Production Deployment Notes](./production-deployment.md)
+
+The rest of this document describes the legacy manual workflow.
+
 Production deployment guide for OwnCord server on Windows.
 
 ## Prerequisites

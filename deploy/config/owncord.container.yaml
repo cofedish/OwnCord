@@ -1,0 +1,30 @@
+# Container-oriented OwnCord configuration.
+# This file assumes TLS is terminated by a reverse proxy such as Caddy/Nginx.
+server:
+  port: 8080
+  name: "OwnCord Server"
+  data_dir: "/app/data"
+  allowed_origins: []
+  trusted_proxies:
+    - "172.30.0.0/24"
+  admin_allowed_cidrs:
+    - "127.0.0.0/8"
+    - "::1/128"
+
+database:
+  path: "/app/data/chatserver.db"
+
+tls:
+  mode: "off"
+
+upload:
+  max_size_mb: 100
+  storage_dir: "/app/data/uploads"
+
+voice:
+  livekit_url: "ws://livekit.example.internal:7880"
+  quality: "medium"
+  # livekit_api_key: ""
+  # livekit_api_secret: ""
+  # livekit_binary: ""
+  # node_ip: ""
