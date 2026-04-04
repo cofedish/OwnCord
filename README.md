@@ -8,13 +8,24 @@
 
 *The gaming chat platform you actually own.*
 
-> **Early Alpha — Building in the Open**
-> OwnCord is under active development and is not production-ready. Do not use it for sensitive communications. Security hardening is in progress. Contributions and [security reports](https://github.com/J3vb/OwnCord/issues) are welcome.
+> **Fork Notice**
+> This fork tracks OwnCord as a Linux-first self-host deployment with Docker/Compose support, safer defaults for internet-facing setups, and fixes for the security issues found during local code audit. The desktop client is still a separate Tauri app and currently remains Windows-oriented.
 
-A self-hosted Windows chat platform with real-time messaging,
-voice/video, file sharing, and a web admin panel. Run your own
+> **Early Alpha — Building in the Open**
+> OwnCord is under active development and is not production-ready. Do not use it for sensitive communications. Security hardening is in progress. Contributions and [security reports](https://github.com/cofedish/OwnCord/issues) are welcome.
+
+A self-hosted chat platform with real-time messaging,
+voice/video, file sharing, and a web admin panel. This fork
 server and keep everything under your control — zero cloud
 dependencies, works fully on LAN.
+
+This fork changes the deployment story substantially:
+
+- server deployment is Linux-first
+- Docker/Compose is the recommended self-host path
+- reverse-proxy-based HTTPS is the expected production setup
+- the desktop client remains a separate Tauri application and is still Windows-oriented
+- the fork includes security hardening and fixes for the issues found during local audit
 
 <p align="center">
   <img src=".github/images/Client.png" alt="OwnCord Client" width="700">
@@ -27,8 +38,43 @@ dependencies, works fully on LAN.
 
 ## Quick Start
 
+### Fork quick start
+
+This fork is optimized for a Linux server with Docker/Compose:
+
+1. Clone this repository.
+2. Copy `.env.example` to `.env`.
+3. Set `OWNCORD_DOMAIN` and review `deploy/config/owncord.container.yaml`.
+4. Start the stack:
+
+   ```bash
+   docker compose --profile proxy up -d --build
+   ```
+
+5. Reach the admin panel locally:
+
+   ```bash
+   ssh -L 8080:127.0.0.1:8080 your-server
+   ```
+
+6. Open `http://127.0.0.1:8080/admin`, create the Owner account, generate an invite code, and share it.
+
+### Desktop client install
+
+Use a release build from this fork's releases page or build the client from source:
+
+```bash
+cd Client/tauri-client
+npm install
+npm run tauri build
+```
+
+The installer is produced under `Client/tauri-client/src-tauri/target/release/bundle/nsis/`.
+
+Important: this fork no longer permits insecure REST/media TLS bypass in the client. Point the client at a real HTTPS endpoint behind Caddy/Nginx/Traefik rather than a raw self-signed listener.
+
 1. Download `chatserver.exe` and the OwnCord installer from
-   [GitHub Releases](https://github.com/J3vb/OwnCord/releases)
+   [GitHub Releases](https://github.com/cofedish/OwnCord/releases)
 2. Run `chatserver.exe` — generates `config.yaml` and a `data/`
    directory (database, TLS certs, uploads, backups) on first run
 3. Open `https://localhost:8443/admin` to create the Owner account
@@ -238,14 +284,16 @@ OwnCord/
 - Rust (stable)
 - Windows 10/11
 
-### Server
+### Server (Linux-first)
 
 ```bash
 cd Server
-go build -o chatserver.exe -ldflags "-s -w -X main.version=1.0.0" .
+go build -o owncord-server -ldflags "-s -w -X main.version=1.0.0" .
 ```
 
-### Client
+For the recommended deployment path, use Docker/Compose instead of running the binary manually. See [docs/docker-deployment.md](docs/docker-deployment.md) and [docs/production-deployment.md](docs/production-deployment.md).
+
+### Client (Windows)
 
 ```bash
 cd Client/tauri-client
@@ -312,6 +360,8 @@ Key settings:
 The client checks for updates after connecting to the server.
 Client updates are Ed25519-signed and verified before install.
 Server auto-updates use a separate minisign/Ed25519 signing key, verify `chatserver.exe.sig`, and require a signed `server-update-manifest.json` that binds the binary hash to the release version before apply.
+
+In this fork, Linux/container deployments should be updated by rebuilding and redeploying the image, not by the built-in server updater.
 
 For maintainers publishing signed releases from GitHub Actions, configure these repository secrets:
 
