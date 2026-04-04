@@ -8,6 +8,8 @@
 
 *The gaming chat platform you actually own.*
 
+[English](README.en.md) | [Русский](README.ru.md)
+
 > **Fork Notice**
 > This fork tracks OwnCord as a Linux-first self-host deployment with Docker/Compose support, safer defaults for internet-facing setups, and fixes for the security issues found during local code audit. The desktop client is still a separate Tauri app and currently remains Windows-oriented.
 
