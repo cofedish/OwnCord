@@ -40,16 +40,22 @@ func (d *DB) GetServerStats() (*ServerStats, error) {
 		return nil, fmt.Errorf("GetServerStats invites: %w", err)
 	}
 
-	// page_count * page_size gives the database size in bytes.
-	// For :memory: databases this still works (returns the in-memory size).
-	var pageCount, pageSize int64
-	if err := d.sqlDB.QueryRow(`PRAGMA page_count`).Scan(&pageCount); err != nil {
-		return nil, fmt.Errorf("GetServerStats page_count: %w", err)
+	if d.dialect == DialectPostgres {
+		if err := d.sqlDB.QueryRow(`SELECT pg_database_size(current_database())`).Scan(&stats.DBSizeBytes); err != nil {
+			return nil, fmt.Errorf("GetServerStats pg_database_size: %w", err)
+		}
+	} else {
+		// page_count * page_size gives the database size in bytes.
+		// For :memory: databases this still works (returns the in-memory size).
+		var pageCount, pageSize int64
+		if err := d.sqlDB.QueryRow(`PRAGMA page_count`).Scan(&pageCount); err != nil {
+			return nil, fmt.Errorf("GetServerStats page_count: %w", err)
+		}
+		if err := d.sqlDB.QueryRow(`PRAGMA page_size`).Scan(&pageSize); err != nil {
+			return nil, fmt.Errorf("GetServerStats page_size: %w", err)
+		}
+		stats.DBSizeBytes = pageCount * pageSize
 	}
-	if err := d.sqlDB.QueryRow(`PRAGMA page_size`).Scan(&pageSize); err != nil {
-		return nil, fmt.Errorf("GetServerStats page_size: %w", err)
-	}
-	stats.DBSizeBytes = pageCount * pageSize
 
 	return stats, nil
 }
@@ -329,6 +335,10 @@ func (d *DB) BackupTo(path string) error {
 // BackupToSafe is the internal implementation that accepts an explicit safe
 // root directory. Exported for testing with isolated directories.
 func (d *DB) BackupToSafe(path, safeRoot string) error {
+	if d.dialect != DialectSQLite {
+		return fmt.Errorf("BackupToSafe: online file backup is not supported for %s", d.dialect)
+	}
+
 	clean := filepath.Clean(path)
 
 	absRoot, err := filepath.Abs(safeRoot)

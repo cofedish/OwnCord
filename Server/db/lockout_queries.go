@@ -5,7 +5,8 @@ import "time"
 // UpsertLockout inserts or replaces a rate-limit lockout entry.
 func (d *DB) UpsertLockout(key string, expiresAt time.Time) error {
 	_, err := d.sqlDB.Exec(
-		`INSERT OR REPLACE INTO rate_lockouts (key, expires_at) VALUES (?, ?)`,
+		`INSERT INTO rate_lockouts (key, expires_at) VALUES (?, ?)
+		 ON CONFLICT(key) DO UPDATE SET expires_at = excluded.expires_at`,
 		key, expiresAt.UTC().Format(time.RFC3339),
 	)
 	return err

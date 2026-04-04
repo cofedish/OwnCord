@@ -35,6 +35,11 @@ func SetBackupBaseDir(dir string) { backupBaseDir = dir }
 
 func handleBackup(database *db.DB) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if database.Dialect() != db.DialectSQLite {
+			writeErr(w, http.StatusNotImplemented, "NOT_SUPPORTED", "database backup is managed externally for PostgreSQL deployments")
+			return
+		}
+
 		backupDir := backupBaseDir
 		if err := os.MkdirAll(backupDir, 0o750); err != nil {
 			writeErr(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to create backup directory")
@@ -144,6 +149,11 @@ func handleDeleteBackup(database *db.DB) http.Handler {
 
 func handleRestoreBackup(database *db.DB, hub HubBroadcaster) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if database.Dialect() != db.DialectSQLite {
+			writeErr(w, http.StatusNotImplemented, "NOT_SUPPORTED", "database restore is managed externally for PostgreSQL deployments")
+			return
+		}
+
 		name := chi.URLParam(r, "name")
 		if name == "" || strings.Contains(name, "..") || strings.ContainsAny(name, `/\`) {
 			writeErr(w, http.StatusBadRequest, "BAD_REQUEST", "invalid backup name")

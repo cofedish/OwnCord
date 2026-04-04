@@ -25,9 +25,14 @@ var (
 	ErrLastAdmin = errors.New("last admin cannot be deleted")
 )
 
-// IsUniqueConstraintError reports whether err is a SQLite UNIQUE constraint
+// IsUniqueConstraintError reports whether err is a database unique constraint
 // violation. This centralizes the fragile string check so callers don't
 // scatter strings.Contains calls throughout the codebase.
 func IsUniqueConstraintError(err error) bool {
-	return err != nil && strings.Contains(err.Error(), "UNIQUE constraint")
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "UNIQUE constraint") ||
+		strings.Contains(msg, "duplicate key value violates unique constraint")
 }

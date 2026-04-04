@@ -223,7 +223,34 @@ func (d *DB) SearchMessages(query string, channelID *int64, limit int) ([]Messag
 		err  error
 	)
 
-	if channelID != nil {
+	if d.dialect == DialectPostgres {
+		if channelID != nil {
+			rows, err = d.sqlDB.Query(
+				`SELECT m.id, m.channel_id, c.name, u.id, u.username, u.avatar, m.content, m.timestamp
+				 FROM messages m
+				 JOIN channels c ON m.channel_id = c.id
+				 JOIN users u ON m.user_id = u.id
+				 WHERE m.search_vector @@ plainto_tsquery('simple', ?)
+				   AND m.channel_id = ?
+				   AND m.deleted = 0
+				 ORDER BY ts_rank_cd(m.search_vector, plainto_tsquery('simple', ?)) DESC, m.id DESC
+				 LIMIT ?`,
+				query, *channelID, query, limit,
+			)
+		} else {
+			rows, err = d.sqlDB.Query(
+				`SELECT m.id, m.channel_id, c.name, u.id, u.username, u.avatar, m.content, m.timestamp
+				 FROM messages m
+				 JOIN channels c ON m.channel_id = c.id
+				 JOIN users u ON m.user_id = u.id
+				 WHERE m.search_vector @@ plainto_tsquery('simple', ?)
+				   AND m.deleted = 0
+				 ORDER BY ts_rank_cd(m.search_vector, plainto_tsquery('simple', ?)) DESC, m.id DESC
+				 LIMIT ?`,
+				query, query, limit,
+			)
+		}
+	} else if channelID != nil {
 		rows, err = d.sqlDB.Query(
 			`SELECT m.id, m.channel_id, c.name, u.id, u.username, u.avatar, m.content, m.timestamp
 			 FROM messages_fts f
@@ -295,18 +322,37 @@ func (d *DB) SearchMessagesInChannels(query string, channelIDs []int64, limit in
 	}
 	args = append(args, limit)
 
-	rows, err := d.sqlDB.Query(
-		fmt.Sprintf(
-			`SELECT m.id, m.channel_id, c.name, u.id, u.username, u.avatar, m.content, m.timestamp
-			 FROM messages_fts f
-			 JOIN messages m ON f.rowid = m.id
-			 JOIN channels c ON m.channel_id = c.id
-			 JOIN users u ON m.user_id = u.id
-			 WHERE messages_fts MATCH ? AND m.channel_id IN (%s) AND m.deleted = 0
-			 ORDER BY rank LIMIT ?`,
-			strings.Join(placeholders, ",")),
-		args...,
-	)
+	var rows *sql.Rows
+	var err error
+	if d.dialect == DialectPostgres {
+		rows, err = d.sqlDB.Query(
+			fmt.Sprintf(
+				`SELECT m.id, m.channel_id, c.name, u.id, u.username, u.avatar, m.content, m.timestamp
+				 FROM messages m
+				 JOIN channels c ON m.channel_id = c.id
+				 JOIN users u ON m.user_id = u.id
+				 WHERE m.search_vector @@ plainto_tsquery('simple', ?)
+				   AND m.channel_id IN (%s)
+				   AND m.deleted = 0
+				 ORDER BY ts_rank_cd(m.search_vector, plainto_tsquery('simple', ?)) DESC, m.id DESC
+				 LIMIT ?`,
+				strings.Join(placeholders, ",")),
+			append([]any{query}, append(args[1:len(args)-1], query, limit)...)...,
+		)
+	} else {
+		rows, err = d.sqlDB.Query(
+			fmt.Sprintf(
+				`SELECT m.id, m.channel_id, c.name, u.id, u.username, u.avatar, m.content, m.timestamp
+				 FROM messages_fts f
+				 JOIN messages m ON f.rowid = m.id
+				 JOIN channels c ON m.channel_id = c.id
+				 JOIN users u ON m.user_id = u.id
+				 WHERE messages_fts MATCH ? AND m.channel_id IN (%s) AND m.deleted = 0
+				 ORDER BY rank LIMIT ?`,
+				strings.Join(placeholders, ",")),
+			args...,
+		)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("SearchMessagesInChannels: %w", err)
 	}

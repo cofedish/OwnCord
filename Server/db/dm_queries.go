@@ -157,7 +157,7 @@ func (d *DB) GetUserDMChannels(userID int64) ([]DMChannelInfo, error) {
 		 LEFT JOIN messages m_unread ON m_unread.channel_id = c.id
 		 LEFT JOIN read_states rs ON rs.channel_id = c.id AND rs.user_id = ?
 		 WHERE dos.user_id = ?
-		 GROUP BY c.id
+		 GROUP BY c.id, u.id, u.username, u.avatar, u.status, lm.id, lm.content, lm.timestamp, dos.opened_at
 		 ORDER BY COALESCE(lm.timestamp, dos.opened_at) DESC`,
 		userID, userID, userID,
 	)
