@@ -14,7 +14,7 @@
 - Review `deploy/config/owncord.container.yaml`.
 - Keep `tls.mode: "off"` inside the container when a reverse proxy handles TLS.
 - Keep `trusted_proxies` limited to the reverse-proxy network only.
-- Leave `admin_allowed_cidrs` on localhost unless you have a dedicated VPN/admin network.
+- In the provided Docker profile, `admin_allowed_cidrs` intentionally also includes the private Docker bridge so host-to-container localhost access works through NAT.
 
 ## Backups
 
@@ -44,4 +44,3 @@ tar -C deploy/runtime -czf owncord-backup-$(date +%F).tar.gz data caddy-data
 - The desktop client now expects valid TLS for REST/media paths. For production this is the intended behavior.
 - `/admin` now uses an `HttpOnly` cookie-backed session instead of `localStorage`.
 - Linux/container deployments should update via image rebuilds, not the built-in server updater.
-

@@ -26,6 +26,13 @@ Server/owncord-server.exe
 Server/server.exe
 Server/config.yaml
 Server/data/
+deploy/runtime/data/*
+!deploy/runtime/data/.gitkeep
+deploy/runtime/caddy-data/*
+!deploy/runtime/caddy-data/.gitkeep
+deploy/runtime/caddy-config/*
+!deploy/runtime/caddy-config/.gitkeep
+.env
 
 # Test coverage artifacts
 *.out

@@ -4,10 +4,5 @@
 	@admin path /admin /admin/*
 	respond @admin 403
 
-	reverse_proxy owncord:8080 {
-		header_up X-Forwarded-Proto {scheme}
-		header_up X-Forwarded-Host {host}
-		header_up X-Forwarded-For {remote_host}
-	}
+	reverse_proxy owncord:8080
 }
-

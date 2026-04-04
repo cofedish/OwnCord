@@ -10,6 +10,7 @@ server:
   admin_allowed_cidrs:
     - "127.0.0.0/8"
     - "::1/128"
+    - "172.30.0.0/24"
 
 database:
   path: "/app/data/chatserver.db"

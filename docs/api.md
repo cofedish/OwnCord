@@ -694,8 +694,10 @@ Files are validated against blocked magic bytes (PE executables, ELF binaries, M
 
 Serve a previously uploaded file by its UUID.
 
-**Auth:** None (URLs are unguessable UUIDs)
-**Caching:** `Cache-Control: public, max-age=31536000, immutable`
+**Auth:** Required
+**Access control:** The uploader may access an unlinked attachment. Once linked to a
+message, access follows the channel or DM authorization rules for that message.
+**Caching:** Private responses are served with `Cache-Control: private, no-store`
 
 Supports HTTP range requests and conditional requests.
 

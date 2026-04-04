@@ -157,12 +157,7 @@ func spawnDetached(exePath string, args []string) error {
 	cmd := exec.Command(exePath, args...) //nolint:gosec // G204: command path from trusted server config
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-
-	if runtime.GOOS == "windows" {
-		cmd.SysProcAttr = &syscall.SysProcAttr{
-			CreationFlags: 0x00000008, // DETACHED_PROCESS
-		}
-	}
+	configureDetachedProcess(cmd)
 
 	return cmd.Start()
 }

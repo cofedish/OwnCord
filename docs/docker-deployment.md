@@ -9,6 +9,7 @@ This is the recommended Linux self-host path for OwnCord.
 - Terminates public TLS at Caddy.
 - Blocks `/admin` at the public reverse proxy by default.
 - Exposes the raw server only on `127.0.0.1:${OWNCORD_ADMIN_PORT}` for SSH tunneling or local admin access.
+- Allows admin requests from the private Docker bridge because host-to-container traffic is NATed through that bridge.
 
 ## Files
 
@@ -81,4 +82,3 @@ Use an external LiveKit service and set:
 - `voice.livekit_api_secret`
 
 Do not enable `voice.livekit_binary` inside the container unless you fully trust that deployment path.
-
