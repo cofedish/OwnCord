@@ -862,7 +862,7 @@ Tauri-compatible update endpoint. The desktop client checks this to see if a new
   "platforms": {
     "windows-x86_64": {
       "signature": "base64-encoded-signature",
-      "url": "https://github.com/J3vb/OwnCord/releases/download/v1.2.0/OwnCord_1.2.0_x64-setup.nsis.zip"
+      "url": "https://github.com/cofedish/OwnCord/releases/download/v1.2.0/OwnCord_1.2.0_x64-setup.nsis.zip"
     }
   }
 }

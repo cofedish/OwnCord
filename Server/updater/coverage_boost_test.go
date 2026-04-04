@@ -12,7 +12,7 @@ import (
 // ─── FindClientAssets ───────────────────────────────────────────────────────
 
 func TestFindClientAssets_NilCache(t *testing.T) {
-	u := NewUpdater("1.0.0", "", "J3vb", "OwnCord")
+	u := NewUpdater("1.0.0", "", "cofedish", "OwnCord")
 
 	ca := u.FindClientAssets()
 	if ca.InstallerURL != "" || ca.SignatureURL != "" {
@@ -21,7 +21,7 @@ func TestFindClientAssets_NilCache(t *testing.T) {
 }
 
 func TestFindClientAssets_WithMatchingAssets(t *testing.T) {
-	u := NewUpdater("1.0.0", "", "J3vb", "OwnCord")
+	u := NewUpdater("1.0.0", "", "cofedish", "OwnCord")
 	u.mu.Lock()
 	u.cache = &UpdateInfo{
 		Assets: []Asset{
@@ -42,7 +42,7 @@ func TestFindClientAssets_WithMatchingAssets(t *testing.T) {
 }
 
 func TestFindClientAssets_NoMatchingAssets(t *testing.T) {
-	u := NewUpdater("1.0.0", "", "J3vb", "OwnCord")
+	u := NewUpdater("1.0.0", "", "cofedish", "OwnCord")
 	u.mu.Lock()
 	u.cache = &UpdateInfo{
 		Assets: []Asset{
@@ -93,7 +93,7 @@ func TestFetchTextAsset_Error(t *testing.T) {
 // ─── shouldSendToken ────────────────────────────────────────────────────────
 
 func TestShouldSendToken_GitHubHost(t *testing.T) {
-	u := NewUpdater("1.0.0", "tok", "J3vb", "OwnCord")
+	u := NewUpdater("1.0.0", "tok", "cofedish", "OwnCord")
 
 	tests := []struct {
 		url  string
@@ -114,7 +114,7 @@ func TestShouldSendToken_GitHubHost(t *testing.T) {
 }
 
 func TestShouldSendToken_CustomBaseURL(t *testing.T) {
-	u := NewUpdater("1.0.0", "tok", "J3vb", "OwnCord")
+	u := NewUpdater("1.0.0", "tok", "cofedish", "OwnCord")
 	u.baseURL = "http://localhost:9090"
 
 	if !u.shouldSendToken("http://localhost:9090/repos/foo/bar") {
@@ -133,7 +133,7 @@ func TestIsGitHubHost(t *testing.T) {
 		want bool
 	}{
 		{"https://api.github.com/repos", true},
-		{"https://github.com/J3vb/OwnCord", true},
+		{"https://github.com/cofedish/OwnCord", true},
 		{"https://objects.githubusercontent.com/asset", true},
 		{"https://raw.githubusercontent.com/file", true},
 		{"https://evil.com", false},
@@ -173,7 +173,7 @@ func TestEnsureVPrefix(t *testing.T) {
 func TestCheckForUpdate_ErrorCaching(t *testing.T) {
 	var hitCount int
 	mux := http.NewServeMux()
-	mux.HandleFunc("/repos/J3vb/OwnCord/releases/latest", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/repos/cofedish/OwnCord/releases/latest", func(w http.ResponseWriter, r *http.Request) {
 		hitCount++
 		w.WriteHeader(http.StatusInternalServerError)
 		_, _ = fmt.Fprint(w, `{"message":"error"}`)
@@ -206,7 +206,7 @@ func TestCheckForUpdate_IncludesAssetsList(t *testing.T) {
 	release := ghRelease{
 		TagName: "v2.0.0",
 		Body:    "notes",
-		HTMLURL: "https://github.com/J3vb/OwnCord/releases/tag/v2.0.0",
+		HTMLURL: "https://github.com/cofedish/OwnCord/releases/tag/v2.0.0",
 		Assets: []ghAsset{
 			{Name: "chatserver.exe", BrowserDownloadURL: "https://example.com/chatserver.exe"},
 			{Name: "checksums.sha256", BrowserDownloadURL: "https://example.com/checksums.sha256"},
@@ -214,7 +214,7 @@ func TestCheckForUpdate_IncludesAssetsList(t *testing.T) {
 		},
 	}
 	mux := http.NewServeMux()
-	mux.HandleFunc("/repos/J3vb/OwnCord/releases/latest", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/repos/cofedish/OwnCord/releases/latest", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(release)
 	})
@@ -242,7 +242,7 @@ func TestDownloadFile_SendsTokenToGitHub(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	u := NewUpdater("1.0.0", "my-secret-token", "J3vb", "OwnCord")
+	u := NewUpdater("1.0.0", "my-secret-token", "cofedish", "OwnCord")
 	u.baseURL = srv.URL
 
 	dest := t.TempDir() + "/download.bin"
@@ -264,7 +264,7 @@ func TestDownloadFile_NoTokenToExternalHost(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	u := NewUpdater("1.0.0", "my-secret-token", "J3vb", "OwnCord")
+	u := NewUpdater("1.0.0", "my-secret-token", "cofedish", "OwnCord")
 	// baseURL is NOT set to srv.URL, so shouldSendToken returns false.
 
 	dest := t.TempDir() + "/download2.bin"
@@ -282,7 +282,7 @@ func TestDownloadFile_NoTokenToExternalHost(t *testing.T) {
 func TestParseChecksumFile_SingleSpace(t *testing.T) {
 	// Some tools output single-space instead of double-space.
 	data := []byte("abc123 chatserver.exe\n")
-	u := NewUpdater("1.0.0", "", "J3vb", "OwnCord")
+	u := NewUpdater("1.0.0", "", "cofedish", "OwnCord")
 	hash, err := u.ParseChecksumFile(data, "chatserver.exe")
 	if err != nil {
 		t.Fatalf("ParseChecksumFile single space: %v", err)
@@ -294,7 +294,7 @@ func TestParseChecksumFile_SingleSpace(t *testing.T) {
 
 func TestParseChecksumFile_EmptyLines(t *testing.T) {
 	data := []byte("\n\nabc123  chatserver.exe\n\n")
-	u := NewUpdater("1.0.0", "", "J3vb", "OwnCord")
+	u := NewUpdater("1.0.0", "", "cofedish", "OwnCord")
 	hash, err := u.ParseChecksumFile(data, "chatserver.exe")
 	if err != nil {
 		t.Fatalf("ParseChecksumFile with empty lines: %v", err)
@@ -305,7 +305,7 @@ func TestParseChecksumFile_EmptyLines(t *testing.T) {
 }
 
 func TestParseChecksumFile_EmptyData(t *testing.T) {
-	u := NewUpdater("1.0.0", "", "J3vb", "OwnCord")
+	u := NewUpdater("1.0.0", "", "cofedish", "OwnCord")
 	_, err := u.ParseChecksumFile([]byte(""), "chatserver.exe")
 	if err == nil {
 		t.Error("expected error for empty checksum data")
@@ -315,7 +315,7 @@ func TestParseChecksumFile_EmptyData(t *testing.T) {
 // ─── VerifyChecksum file not found ──────────────────────────────────────────
 
 func TestVerifyChecksum_FileNotFound(t *testing.T) {
-	u := NewUpdater("1.0.0", "", "J3vb", "OwnCord")
+	u := NewUpdater("1.0.0", "", "cofedish", "OwnCord")
 	err := u.VerifyChecksum("/nonexistent/path/to/file.exe", "abc123")
 	if err == nil {
 		t.Error("expected error for non-existent file")

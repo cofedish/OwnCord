@@ -108,7 +108,7 @@ func TestNewHandler_AuthProtectedRoute(t *testing.T) {
 // updater is provided.
 func TestNewHandler_WithUpdater(t *testing.T) {
 	database := openAdminTestDB(t)
-	u := updater.NewUpdater("1.0.0", "", "J3vb", "OwnCord")
+	u := updater.NewUpdater("1.0.0", "", "cofedish", "OwnCord")
 	h := admin.NewHandler(database, "1.0.0", &mockHub{}, u, nil, nil)
 	if h == nil {
 		t.Fatal("NewHandler with updater returned nil handler")

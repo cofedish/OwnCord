@@ -17,19 +17,19 @@ func TestAdminAPI_CheckUpdate_OK(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"tag_name": "v2.0.0",
 			"body":     "New release",
-			"html_url": "https://github.com/J3vb/OwnCord/releases/tag/v2.0.0",
+			"html_url": "https://github.com/cofedish/OwnCord/releases/tag/v2.0.0",
 			"assets": []map[string]any{
-				{"name": "chatserver.exe", "browser_download_url": "https://github.com/J3vb/OwnCord/releases/download/v2.0.0/chatserver.exe"},
-				{"name": "checksums.sha256", "browser_download_url": "https://github.com/J3vb/OwnCord/releases/download/v2.0.0/checksums.sha256"},
-				{"name": "chatserver.exe.sig", "browser_download_url": "https://github.com/J3vb/OwnCord/releases/download/v2.0.0/chatserver.exe.sig"},
-				{"name": "server-update-manifest.json", "browser_download_url": "https://github.com/J3vb/OwnCord/releases/download/v2.0.0/server-update-manifest.json"},
-				{"name": "server-update-manifest.json.sig", "browser_download_url": "https://github.com/J3vb/OwnCord/releases/download/v2.0.0/server-update-manifest.json.sig"},
+				{"name": "chatserver.exe", "browser_download_url": "https://github.com/cofedish/OwnCord/releases/download/v2.0.0/chatserver.exe"},
+				{"name": "checksums.sha256", "browser_download_url": "https://github.com/cofedish/OwnCord/releases/download/v2.0.0/checksums.sha256"},
+				{"name": "chatserver.exe.sig", "browser_download_url": "https://github.com/cofedish/OwnCord/releases/download/v2.0.0/chatserver.exe.sig"},
+				{"name": "server-update-manifest.json", "browser_download_url": "https://github.com/cofedish/OwnCord/releases/download/v2.0.0/server-update-manifest.json"},
+				{"name": "server-update-manifest.json.sig", "browser_download_url": "https://github.com/cofedish/OwnCord/releases/download/v2.0.0/server-update-manifest.json.sig"},
 			},
 		})
 	}))
 	defer mockGH.Close()
 
-	u := updater.NewUpdater("1.0.0", "", "J3vb", "OwnCord")
+	u := updater.NewUpdater("1.0.0", "", "cofedish", "OwnCord")
 	u.SetBaseURL(mockGH.URL)
 
 	database := openAdminTestDB(t)
@@ -59,16 +59,16 @@ func TestAdminAPI_CheckUpdate_IncompleteReleaseNotInstallable(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"tag_name": "v2.0.0",
 			"body":     "Missing manifest",
-			"html_url": "https://github.com/J3vb/OwnCord/releases/tag/v2.0.0",
+			"html_url": "https://github.com/cofedish/OwnCord/releases/tag/v2.0.0",
 			"assets": []map[string]any{
-				{"name": "chatserver.exe", "browser_download_url": "https://github.com/J3vb/OwnCord/releases/download/v2.0.0/chatserver.exe"},
-				{"name": "checksums.sha256", "browser_download_url": "https://github.com/J3vb/OwnCord/releases/download/v2.0.0/checksums.sha256"},
+				{"name": "chatserver.exe", "browser_download_url": "https://github.com/cofedish/OwnCord/releases/download/v2.0.0/chatserver.exe"},
+				{"name": "checksums.sha256", "browser_download_url": "https://github.com/cofedish/OwnCord/releases/download/v2.0.0/checksums.sha256"},
 			},
 		})
 	}))
 	defer mockGH.Close()
 
-	u := updater.NewUpdater("1.0.0", "", "J3vb", "OwnCord")
+	u := updater.NewUpdater("1.0.0", "", "cofedish", "OwnCord")
 	u.SetBaseURL(mockGH.URL)
 
 	database := openAdminTestDB(t)
@@ -95,13 +95,13 @@ func TestAdminAPI_CheckUpdate_UpToDate(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"tag_name": "v1.0.0",
 			"body":     "",
-			"html_url": "https://github.com/J3vb/OwnCord/releases/tag/v1.0.0",
+			"html_url": "https://github.com/cofedish/OwnCord/releases/tag/v1.0.0",
 			"assets":   []map[string]any{},
 		})
 	}))
 	defer mockGH.Close()
 
-	u := updater.NewUpdater("1.0.0", "", "J3vb", "OwnCord")
+	u := updater.NewUpdater("1.0.0", "", "cofedish", "OwnCord")
 	u.SetBaseURL(mockGH.URL)
 
 	database := openAdminTestDB(t)
@@ -187,13 +187,13 @@ func TestAdminAPI_ApplyUpdate_NoUpdateAvailable(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"tag_name": "v1.0.0",
 			"body":     "",
-			"html_url": "https://github.com/J3vb/OwnCord/releases/tag/v1.0.0",
+			"html_url": "https://github.com/cofedish/OwnCord/releases/tag/v1.0.0",
 			"assets":   []map[string]any{},
 		})
 	}))
 	defer mockGH.Close()
 
-	u := updater.NewUpdater("1.0.0", "", "J3vb", "OwnCord")
+	u := updater.NewUpdater("1.0.0", "", "cofedish", "OwnCord")
 	u.SetBaseURL(mockGH.URL)
 
 	database := openAdminTestDB(t)
@@ -224,7 +224,7 @@ func TestAdminAPI_ApplyUpdate_CheckFails(t *testing.T) {
 	}))
 	defer mockGH.Close()
 
-	u := updater.NewUpdater("1.0.0", "", "J3vb", "OwnCord")
+	u := updater.NewUpdater("1.0.0", "", "cofedish", "OwnCord")
 	u.SetBaseURL(mockGH.URL)
 
 	database := openAdminTestDB(t)
@@ -246,13 +246,13 @@ func TestAdminAPI_ApplyUpdate_MissingAssets(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"tag_name": "v2.0.0",
 			"body":     "Release notes",
-			"html_url": "https://github.com/J3vb/OwnCord/releases/tag/v2.0.0",
+			"html_url": "https://github.com/cofedish/OwnCord/releases/tag/v2.0.0",
 			"assets":   []map[string]any{},
 		})
 	}))
 	defer mockGH.Close()
 
-	u := updater.NewUpdater("1.0.0", "", "J3vb", "OwnCord")
+	u := updater.NewUpdater("1.0.0", "", "cofedish", "OwnCord")
 	u.SetBaseURL(mockGH.URL)
 
 	database := openAdminTestDB(t)
@@ -300,27 +300,27 @@ func TestAdminAPI_ApplyUpdate_DownloadFails(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"tag_name": "v2.0.0",
 			"body":     "Release notes",
-			"html_url": "https://github.com/J3vb/OwnCord/releases/tag/v2.0.0",
+			"html_url": "https://github.com/cofedish/OwnCord/releases/tag/v2.0.0",
 			"assets": []map[string]any{
 				{
 					"name":                 "chatserver.exe",
-					"browser_download_url": "https://github.com/J3vb/OwnCord/releases/download/v2.0.0/chatserver.exe",
+					"browser_download_url": "https://github.com/cofedish/OwnCord/releases/download/v2.0.0/chatserver.exe",
 				},
 				{
 					"name":                 "checksums.sha256",
-					"browser_download_url": "https://github.com/J3vb/OwnCord/releases/download/v2.0.0/checksums.sha256",
+					"browser_download_url": "https://github.com/cofedish/OwnCord/releases/download/v2.0.0/checksums.sha256",
 				},
 				{
 					"name":                 "chatserver.exe.sig",
-					"browser_download_url": "https://github.com/J3vb/OwnCord/releases/download/v2.0.0/chatserver.exe.sig",
+					"browser_download_url": "https://github.com/cofedish/OwnCord/releases/download/v2.0.0/chatserver.exe.sig",
 				},
 				{
 					"name":                 "server-update-manifest.json",
-					"browser_download_url": "https://github.com/J3vb/OwnCord/releases/download/v2.0.0/server-update-manifest.json",
+					"browser_download_url": "https://github.com/cofedish/OwnCord/releases/download/v2.0.0/server-update-manifest.json",
 				},
 				{
 					"name":                 "server-update-manifest.json.sig",
-					"browser_download_url": "https://github.com/J3vb/OwnCord/releases/download/v2.0.0/server-update-manifest.json.sig",
+					"browser_download_url": "https://github.com/cofedish/OwnCord/releases/download/v2.0.0/server-update-manifest.json.sig",
 				},
 			},
 		})
@@ -329,7 +329,7 @@ func TestAdminAPI_ApplyUpdate_DownloadFails(t *testing.T) {
 	defer mockGH.Close()
 	mockGHURL = mockGH.URL
 
-	u := updater.NewUpdater("1.0.0", "", "J3vb", "OwnCord")
+	u := updater.NewUpdater("1.0.0", "", "cofedish", "OwnCord")
 	u.SetBaseURL(mockGH.URL)
 	// The download URLs are real GitHub URLs that will fail since we're not
 	// actually connected to GitHub in tests, or we can use the URL validation

@@ -52,7 +52,7 @@ func newTestRelease(tag, body, htmlURL string, assetDownloadBase string) ghRelea
 func newTestServer(t *testing.T, release ghRelease, statusCode int) *httptest.Server {
 	t.Helper()
 	mux := http.NewServeMux()
-	mux.HandleFunc("/repos/J3vb/OwnCord/releases/latest", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/repos/cofedish/OwnCord/releases/latest", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
 		if statusCode == http.StatusOK {
@@ -67,7 +67,7 @@ func newTestServer(t *testing.T, release ghRelease, statusCode int) *httptest.Se
 }
 
 func newTestUpdater(baseURL, currentVersion string) *Updater {
-	u := NewUpdater(currentVersion, "", "J3vb", "OwnCord")
+	u := NewUpdater(currentVersion, "", "cofedish", "OwnCord")
 	u.baseURL = baseURL
 	return u
 }
@@ -97,8 +97,8 @@ func signTestAsset(t *testing.T, privateKey minisign.PrivateKey, content []byte)
 }
 
 func TestCheckForUpdate_NewerVersionAvailable(t *testing.T) {
-	release := newTestRelease("v1.2.0", "Bug fixes and improvements", "https://github.com/J3vb/OwnCord/releases/tag/v1.2.0",
-		"https://github.com/J3vb/OwnCord/releases/download/v1.2.0")
+	release := newTestRelease("v1.2.0", "Bug fixes and improvements", "https://github.com/cofedish/OwnCord/releases/tag/v1.2.0",
+		"https://github.com/cofedish/OwnCord/releases/download/v1.2.0")
 	srv := newTestServer(t, release, http.StatusOK)
 	defer srv.Close()
 
@@ -140,10 +140,10 @@ func TestCheckForUpdate_MissingRequiredAssetsSuppressesUpdate(t *testing.T) {
 	release := ghRelease{
 		TagName: "v1.2.0",
 		Body:    "Broken release",
-		HTMLURL: "https://github.com/J3vb/OwnCord/releases/tag/v1.2.0",
+		HTMLURL: "https://github.com/cofedish/OwnCord/releases/tag/v1.2.0",
 		Assets: []ghAsset{
-			{Name: "chatserver.exe", BrowserDownloadURL: "https://github.com/J3vb/OwnCord/releases/download/v1.2.0/chatserver.exe"},
-			{Name: "checksums.sha256", BrowserDownloadURL: "https://github.com/J3vb/OwnCord/releases/download/v1.2.0/checksums.sha256"},
+			{Name: "chatserver.exe", BrowserDownloadURL: "https://github.com/cofedish/OwnCord/releases/download/v1.2.0/chatserver.exe"},
+			{Name: "checksums.sha256", BrowserDownloadURL: "https://github.com/cofedish/OwnCord/releases/download/v1.2.0/checksums.sha256"},
 		},
 	}
 	srv := newTestServer(t, release, http.StatusOK)
@@ -163,8 +163,8 @@ func TestCheckForUpdate_MissingRequiredAssetsSuppressesUpdate(t *testing.T) {
 }
 
 func TestCheckForUpdate_UpToDate(t *testing.T) {
-	release := newTestRelease("v1.0.0", "Current release", "https://github.com/J3vb/OwnCord/releases/tag/v1.0.0",
-		"https://github.com/J3vb/OwnCord/releases/download/v1.0.0")
+	release := newTestRelease("v1.0.0", "Current release", "https://github.com/cofedish/OwnCord/releases/tag/v1.0.0",
+		"https://github.com/cofedish/OwnCord/releases/download/v1.0.0")
 	srv := newTestServer(t, release, http.StatusOK)
 	defer srv.Close()
 
@@ -180,11 +180,11 @@ func TestCheckForUpdate_UpToDate(t *testing.T) {
 
 func TestCheckForUpdate_CachesResult(t *testing.T) {
 	var hitCount atomic.Int32
-	release := newTestRelease("v2.0.0", "Major update", "https://github.com/J3vb/OwnCord/releases/tag/v2.0.0",
-		"https://github.com/J3vb/OwnCord/releases/download/v2.0.0")
+	release := newTestRelease("v2.0.0", "Major update", "https://github.com/cofedish/OwnCord/releases/tag/v2.0.0",
+		"https://github.com/cofedish/OwnCord/releases/download/v2.0.0")
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/repos/J3vb/OwnCord/releases/latest", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/repos/cofedish/OwnCord/releases/latest", func(w http.ResponseWriter, r *http.Request) {
 		hitCount.Add(1)
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(release); err != nil {
@@ -213,11 +213,11 @@ func TestCheckForUpdate_CachesResult(t *testing.T) {
 
 func TestCheckForUpdate_CacheExpires(t *testing.T) {
 	var hitCount atomic.Int32
-	release := newTestRelease("v2.0.0", "Major update", "https://github.com/J3vb/OwnCord/releases/tag/v2.0.0",
-		"https://github.com/J3vb/OwnCord/releases/download/v2.0.0")
+	release := newTestRelease("v2.0.0", "Major update", "https://github.com/cofedish/OwnCord/releases/tag/v2.0.0",
+		"https://github.com/cofedish/OwnCord/releases/download/v2.0.0")
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/repos/J3vb/OwnCord/releases/latest", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/repos/cofedish/OwnCord/releases/latest", func(w http.ResponseWriter, r *http.Request) {
 		hitCount.Add(1)
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(release); err != nil {
@@ -265,15 +265,15 @@ func TestCheckForUpdate_APIError(t *testing.T) {
 }
 
 func TestValidateDownloadURL_Valid(t *testing.T) {
-	u := NewUpdater("1.0.0", "", "J3vb", "OwnCord")
-	err := u.ValidateDownloadURL("https://github.com/J3vb/OwnCord/releases/download/v1.0.0/chatserver.exe")
+	u := NewUpdater("1.0.0", "", "cofedish", "OwnCord")
+	err := u.ValidateDownloadURL("https://github.com/cofedish/OwnCord/releases/download/v1.0.0/chatserver.exe")
 	if err != nil {
 		t.Errorf("expected valid URL to pass, got error: %v", err)
 	}
 }
 
 func TestValidateDownloadURL_Invalid(t *testing.T) {
-	u := NewUpdater("1.0.0", "", "J3vb", "OwnCord")
+	u := NewUpdater("1.0.0", "", "cofedish", "OwnCord")
 	err := u.ValidateDownloadURL("https://evil.com/chatserver.exe")
 	if err == nil {
 		t.Error("expected invalid URL to be rejected, got nil")
@@ -291,7 +291,7 @@ func TestVerifyChecksum_Correct(t *testing.T) {
 		t.Fatalf("writing temp file: %v", err)
 	}
 
-	u := NewUpdater("1.0.0", "", "J3vb", "OwnCord")
+	u := NewUpdater("1.0.0", "", "cofedish", "OwnCord")
 	if err := u.VerifyChecksum(filePath, expectedHash); err != nil {
 		t.Errorf("expected correct checksum to pass, got error: %v", err)
 	}
@@ -306,7 +306,7 @@ func TestVerifyChecksum_Incorrect(t *testing.T) {
 		t.Fatalf("writing temp file: %v", err)
 	}
 
-	u := NewUpdater("1.0.0", "", "J3vb", "OwnCord")
+	u := NewUpdater("1.0.0", "", "cofedish", "OwnCord")
 	wrongHash := "0000000000000000000000000000000000000000000000000000000000000000"
 	if err := u.VerifyChecksum(filePath, wrongHash); err == nil {
 		t.Error("expected incorrect checksum to fail, got nil")
@@ -315,7 +315,7 @@ func TestVerifyChecksum_Incorrect(t *testing.T) {
 
 func TestParseChecksumFile_FindsFile(t *testing.T) {
 	data := []byte("abc123  readme.txt\ndef456  chatserver.exe\nghi789  other.dll\n")
-	u := NewUpdater("1.0.0", "", "J3vb", "OwnCord")
+	u := NewUpdater("1.0.0", "", "cofedish", "OwnCord")
 	hash, err := u.ParseChecksumFile(data, "chatserver.exe")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -327,7 +327,7 @@ func TestParseChecksumFile_FindsFile(t *testing.T) {
 
 func TestParseChecksumFile_FileNotFound(t *testing.T) {
 	data := []byte("abc123  readme.txt\ndef456  chatserver.exe\n")
-	u := NewUpdater("1.0.0", "", "J3vb", "OwnCord")
+	u := NewUpdater("1.0.0", "", "cofedish", "OwnCord")
 	_, err := u.ParseChecksumFile(data, "nonexistent.exe")
 	if err == nil {
 		t.Error("expected error for missing file in checksum data, got nil")
@@ -335,7 +335,7 @@ func TestParseChecksumFile_FileNotFound(t *testing.T) {
 }
 
 func TestAssetFilenameFromURL(t *testing.T) {
-	got, err := assetFilenameFromURL("https://github.com/J3vb/OwnCord/releases/download/v1.0.0/chatserver.exe")
+	got, err := assetFilenameFromURL("https://github.com/cofedish/OwnCord/releases/download/v1.0.0/chatserver.exe")
 	if err != nil {
 		t.Fatalf("assetFilenameFromURL: %v", err)
 	}
@@ -368,7 +368,7 @@ func TestDefaultServerSignaturePublicKey_DiffersFromTauriUpdaterKey(t *testing.T
 }
 
 func TestDefaultServerSignaturePublicKey_Parseable(t *testing.T) {
-	u := NewUpdater("1.0.0", "", "J3vb", "OwnCord")
+	u := NewUpdater("1.0.0", "", "cofedish", "OwnCord")
 	if _, err := u.serverSignaturePublicKey(); err != nil {
 		t.Fatalf("serverSignaturePublicKey: %v", err)
 	}
@@ -377,7 +377,7 @@ func TestDefaultServerSignaturePublicKey_Parseable(t *testing.T) {
 // ─── SetBaseURL ──────────────────────────────────────────────────────────────
 
 func TestSetBaseURL(t *testing.T) {
-	u := NewUpdater("1.0.0", "", "J3vb", "OwnCord")
+	u := NewUpdater("1.0.0", "", "cofedish", "OwnCord")
 	u.SetBaseURL("https://custom.api.example.com")
 	if u.apiBaseURL() != "https://custom.api.example.com" {
 		t.Errorf("apiBaseURL = %q, want custom URL", u.apiBaseURL())
@@ -385,7 +385,7 @@ func TestSetBaseURL(t *testing.T) {
 }
 
 func TestApiBaseURL_DefaultWhenEmpty(t *testing.T) {
-	u := NewUpdater("1.0.0", "", "J3vb", "OwnCord")
+	u := NewUpdater("1.0.0", "", "cofedish", "OwnCord")
 	got := u.apiBaseURL()
 	if got != defaultBaseURL {
 		t.Errorf("apiBaseURL = %q, want default %q", got, defaultBaseURL)
@@ -433,7 +433,7 @@ func TestFetchBody_WithGithubToken(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	u := NewUpdater("1.0.0", "my-token", "J3vb", "OwnCord")
+	u := NewUpdater("1.0.0", "my-token", "cofedish", "OwnCord")
 	u.baseURL = srv.URL
 	_, _ = u.fetchBody(context.Background(), srv.URL+"/test")
 	if gotAuth != "token my-token" {
@@ -519,11 +519,11 @@ func TestDownloadAndVerify_Success(t *testing.T) {
 
 	u.baseURL = srv.URL
 
-	downloadURL := "https://github.com/J3vb/OwnCord/releases/download/v1.0.0/chatserver.exe"
-	checksumURL := "https://github.com/J3vb/OwnCord/releases/download/v1.0.0/checksums.sha256"
-	signatureURL := "https://github.com/J3vb/OwnCord/releases/download/v1.0.0/chatserver.exe.sig"
-	manifestURL := "https://github.com/J3vb/OwnCord/releases/download/v1.0.0/server-update-manifest.json"
-	manifestSignatureURL := "https://github.com/J3vb/OwnCord/releases/download/v1.0.0/server-update-manifest.json.sig"
+	downloadURL := "https://github.com/cofedish/OwnCord/releases/download/v1.0.0/chatserver.exe"
+	checksumURL := "https://github.com/cofedish/OwnCord/releases/download/v1.0.0/checksums.sha256"
+	signatureURL := "https://github.com/cofedish/OwnCord/releases/download/v1.0.0/chatserver.exe.sig"
+	manifestURL := "https://github.com/cofedish/OwnCord/releases/download/v1.0.0/server-update-manifest.json"
+	manifestSignatureURL := "https://github.com/cofedish/OwnCord/releases/download/v1.0.0/server-update-manifest.json.sig"
 
 	// Override HTTP client to route GitHub URLs to our test server.
 	u.httpClient = &http.Client{
@@ -543,7 +543,7 @@ func TestDownloadAndVerify_Success(t *testing.T) {
 }
 
 func TestDownloadAndVerify_InvalidDownloadURL(t *testing.T) {
-	u := NewUpdater("1.0.0", "", "J3vb", "OwnCord")
+	u := NewUpdater("1.0.0", "", "cofedish", "OwnCord")
 	err := u.DownloadAndVerify(context.Background(), "v1.0.0", "https://evil.com/file", "https://evil.com/sum", "https://evil.com/file.sig", "https://evil.com/manifest.json", "https://evil.com/manifest.json.sig", "/tmp/out")
 	if err == nil {
 		t.Error("DownloadAndVerify should reject invalid download URL")
@@ -551,9 +551,9 @@ func TestDownloadAndVerify_InvalidDownloadURL(t *testing.T) {
 }
 
 func TestDownloadAndVerify_InvalidChecksumURL(t *testing.T) {
-	u := NewUpdater("1.0.0", "", "J3vb", "OwnCord")
-	downloadURL := "https://github.com/J3vb/OwnCord/releases/download/v1.0.0/chatserver.exe"
-	err := u.DownloadAndVerify(context.Background(), "v1.0.0", downloadURL, "https://evil.com/sum", "https://github.com/J3vb/OwnCord/releases/download/v1.0.0/chatserver.exe.sig", "https://github.com/J3vb/OwnCord/releases/download/v1.0.0/server-update-manifest.json", "https://github.com/J3vb/OwnCord/releases/download/v1.0.0/server-update-manifest.json.sig", "/tmp/out")
+	u := NewUpdater("1.0.0", "", "cofedish", "OwnCord")
+	downloadURL := "https://github.com/cofedish/OwnCord/releases/download/v1.0.0/chatserver.exe"
+	err := u.DownloadAndVerify(context.Background(), "v1.0.0", downloadURL, "https://evil.com/sum", "https://github.com/cofedish/OwnCord/releases/download/v1.0.0/chatserver.exe.sig", "https://github.com/cofedish/OwnCord/releases/download/v1.0.0/server-update-manifest.json", "https://github.com/cofedish/OwnCord/releases/download/v1.0.0/server-update-manifest.json.sig", "/tmp/out")
 	if err == nil {
 		t.Error("DownloadAndVerify should reject invalid checksum URL")
 	}
@@ -593,11 +593,11 @@ func TestDownloadAndVerify_ChecksumMismatch(t *testing.T) {
 
 	u.httpClient = &http.Client{Transport: &rewriteTransport{srv.URL}}
 
-	downloadURL := "https://github.com/J3vb/OwnCord/releases/download/v1.0.0/chatserver.exe"
-	checksumURL := "https://github.com/J3vb/OwnCord/releases/download/v1.0.0/checksums.sha256"
-	signatureURL := "https://github.com/J3vb/OwnCord/releases/download/v1.0.0/chatserver.exe.sig"
-	manifestURL := "https://github.com/J3vb/OwnCord/releases/download/v1.0.0/server-update-manifest.json"
-	manifestSignatureURL := "https://github.com/J3vb/OwnCord/releases/download/v1.0.0/server-update-manifest.json.sig"
+	downloadURL := "https://github.com/cofedish/OwnCord/releases/download/v1.0.0/chatserver.exe"
+	checksumURL := "https://github.com/cofedish/OwnCord/releases/download/v1.0.0/checksums.sha256"
+	signatureURL := "https://github.com/cofedish/OwnCord/releases/download/v1.0.0/chatserver.exe.sig"
+	manifestURL := "https://github.com/cofedish/OwnCord/releases/download/v1.0.0/server-update-manifest.json"
+	manifestSignatureURL := "https://github.com/cofedish/OwnCord/releases/download/v1.0.0/server-update-manifest.json.sig"
 
 	err := u.DownloadAndVerify(context.Background(), "v1.0.0", downloadURL, checksumURL, signatureURL, manifestURL, manifestSignatureURL, dest)
 	if err == nil {
@@ -642,11 +642,11 @@ func TestDownloadAndVerify_MissingSignature(t *testing.T) {
 	err := u.DownloadAndVerify(
 		context.Background(),
 		"v1.0.0",
-		"https://github.com/J3vb/OwnCord/releases/download/v1.0.0/chatserver.exe",
-		"https://github.com/J3vb/OwnCord/releases/download/v1.0.0/checksums.sha256",
-		"https://github.com/J3vb/OwnCord/releases/download/v1.0.0/chatserver.exe.sig",
-		"https://github.com/J3vb/OwnCord/releases/download/v1.0.0/server-update-manifest.json",
-		"https://github.com/J3vb/OwnCord/releases/download/v1.0.0/server-update-manifest.json.sig",
+		"https://github.com/cofedish/OwnCord/releases/download/v1.0.0/chatserver.exe",
+		"https://github.com/cofedish/OwnCord/releases/download/v1.0.0/checksums.sha256",
+		"https://github.com/cofedish/OwnCord/releases/download/v1.0.0/chatserver.exe.sig",
+		"https://github.com/cofedish/OwnCord/releases/download/v1.0.0/server-update-manifest.json",
+		"https://github.com/cofedish/OwnCord/releases/download/v1.0.0/server-update-manifest.json.sig",
 		dest,
 	)
 	if err == nil {
@@ -690,11 +690,11 @@ func TestDownloadAndVerify_InvalidSignature(t *testing.T) {
 	err := u.DownloadAndVerify(
 		context.Background(),
 		"v1.0.0",
-		"https://github.com/J3vb/OwnCord/releases/download/v1.0.0/chatserver.exe",
-		"https://github.com/J3vb/OwnCord/releases/download/v1.0.0/checksums.sha256",
-		"https://github.com/J3vb/OwnCord/releases/download/v1.0.0/chatserver.exe.sig",
-		"https://github.com/J3vb/OwnCord/releases/download/v1.0.0/server-update-manifest.json",
-		"https://github.com/J3vb/OwnCord/releases/download/v1.0.0/server-update-manifest.json.sig",
+		"https://github.com/cofedish/OwnCord/releases/download/v1.0.0/chatserver.exe",
+		"https://github.com/cofedish/OwnCord/releases/download/v1.0.0/checksums.sha256",
+		"https://github.com/cofedish/OwnCord/releases/download/v1.0.0/chatserver.exe.sig",
+		"https://github.com/cofedish/OwnCord/releases/download/v1.0.0/server-update-manifest.json",
+		"https://github.com/cofedish/OwnCord/releases/download/v1.0.0/server-update-manifest.json.sig",
 		dest,
 	)
 	if err == nil {
@@ -739,11 +739,11 @@ func TestDownloadAndVerify_MalformedSignature(t *testing.T) {
 	err := u.DownloadAndVerify(
 		context.Background(),
 		"v1.0.0",
-		"https://github.com/J3vb/OwnCord/releases/download/v1.0.0/chatserver.exe",
-		"https://github.com/J3vb/OwnCord/releases/download/v1.0.0/checksums.sha256",
-		"https://github.com/J3vb/OwnCord/releases/download/v1.0.0/chatserver.exe.sig",
-		"https://github.com/J3vb/OwnCord/releases/download/v1.0.0/server-update-manifest.json",
-		"https://github.com/J3vb/OwnCord/releases/download/v1.0.0/server-update-manifest.json.sig",
+		"https://github.com/cofedish/OwnCord/releases/download/v1.0.0/chatserver.exe",
+		"https://github.com/cofedish/OwnCord/releases/download/v1.0.0/checksums.sha256",
+		"https://github.com/cofedish/OwnCord/releases/download/v1.0.0/chatserver.exe.sig",
+		"https://github.com/cofedish/OwnCord/releases/download/v1.0.0/server-update-manifest.json",
+		"https://github.com/cofedish/OwnCord/releases/download/v1.0.0/server-update-manifest.json.sig",
 		dest,
 	)
 	if err == nil {
@@ -787,11 +787,11 @@ func TestDownloadAndVerify_ManifestVersionMismatch(t *testing.T) {
 	err := u.DownloadAndVerify(
 		context.Background(),
 		"v1.0.0",
-		"https://github.com/J3vb/OwnCord/releases/download/v1.0.0/chatserver.exe",
-		"https://github.com/J3vb/OwnCord/releases/download/v1.0.0/checksums.sha256",
-		"https://github.com/J3vb/OwnCord/releases/download/v1.0.0/chatserver.exe.sig",
-		"https://github.com/J3vb/OwnCord/releases/download/v1.0.0/server-update-manifest.json",
-		"https://github.com/J3vb/OwnCord/releases/download/v1.0.0/server-update-manifest.json.sig",
+		"https://github.com/cofedish/OwnCord/releases/download/v1.0.0/chatserver.exe",
+		"https://github.com/cofedish/OwnCord/releases/download/v1.0.0/checksums.sha256",
+		"https://github.com/cofedish/OwnCord/releases/download/v1.0.0/chatserver.exe.sig",
+		"https://github.com/cofedish/OwnCord/releases/download/v1.0.0/server-update-manifest.json",
+		"https://github.com/cofedish/OwnCord/releases/download/v1.0.0/server-update-manifest.json.sig",
 		dest,
 	)
 	if err == nil {
