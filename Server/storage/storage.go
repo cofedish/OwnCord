@@ -11,6 +11,23 @@ import (
 	"strings"
 )
 
+// ReadSeekCloser is the minimum reader contract required for serving stored
+// objects via http.ServeContent.
+type ReadSeekCloser interface {
+	io.Reader
+	io.Seeker
+	io.Closer
+	Stat() (os.FileInfo, error)
+}
+
+// BlobStore is the storage contract used by the application for binary
+// attachment persistence.
+type BlobStore interface {
+	Save(name string, r io.Reader) (int64, error)
+	Delete(name string) error
+	Open(name string) (ReadSeekCloser, error)
+}
+
 // blockedMagic maps format names to their magic byte signatures. Files whose
 // leading bytes match any entry are rejected by ValidateFileType.
 var blockedMagic = []struct {
@@ -170,7 +187,7 @@ func (s *Storage) Delete(uuid string) error {
 }
 
 // Open opens the file named uuid for reading.
-func (s *Storage) Open(uuid string) (*os.File, error) {
+func (s *Storage) Open(uuid string) (ReadSeekCloser, error) {
 	if err := sanitizeFilename(uuid); err != nil {
 		return nil, err
 	}

@@ -75,7 +75,7 @@ func isUnsafeInlineMIME(mimeType string) bool {
 
 // MountUploadRoutes registers upload and file-serving endpoints.
 // allowedOrigins controls the Access-Control-Allow-Origin header on served files.
-func MountUploadRoutes(r chi.Router, database *db.DB, store *storage.Storage, limiter *auth.RateLimiter, allowedOrigins []string) {
+func MountUploadRoutes(r chi.Router, database *db.DB, store storage.BlobStore, limiter *auth.RateLimiter, allowedOrigins []string) {
 	// Upload requires authentication and a higher body size limit (100 MB).
 	r.With(
 		AuthMiddleware(database),
@@ -85,7 +85,7 @@ func MountUploadRoutes(r chi.Router, database *db.DB, store *storage.Storage, li
 	r.With(AuthMiddleware(database)).Get("/api/v1/files/{id}", handleServeFile(database, store, allowedOrigins))
 }
 
-func handleUpload(database *db.DB, store *storage.Storage, limiter *auth.RateLimiter) http.HandlerFunc {
+func handleUpload(database *db.DB, store storage.BlobStore, limiter *auth.RateLimiter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// BUG-131: Per-user upload rate limit to prevent disk exhaustion.
 		user, ok := r.Context().Value(UserKey).(*db.User)
@@ -202,7 +202,7 @@ func handleUpload(database *db.DB, store *storage.Storage, limiter *auth.RateLim
 	}
 }
 
-func handleServeFile(database *db.DB, store *storage.Storage, allowedOrigins []string) http.HandlerFunc {
+func handleServeFile(database *db.DB, store storage.BlobStore, allowedOrigins []string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fileID := chi.URLParam(r, "id")
 		if fileID == "" {
