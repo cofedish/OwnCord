@@ -25,15 +25,21 @@ import (
 	"strings"
 )
 
-const createSchemaVersions = `
+func createSchemaVersionsSQL(dialect Dialect) string {
+	defaultExpr := "datetime('now')"
+	if dialect == DialectPostgres {
+		defaultExpr = postgresNowExpr
+	}
+	return fmt.Sprintf(`
 CREATE TABLE IF NOT EXISTS schema_versions (
     version    TEXT PRIMARY KEY,
-    applied_at TEXT NOT NULL DEFAULT (datetime('now'))
-)`
+    applied_at TEXT NOT NULL DEFAULT (%s)
+)`, defaultExpr)
+}
 
 // ensureSchemaVersions creates the tracking table if it does not yet exist.
 func ensureSchemaVersions(d *DB) error {
-	if _, err := d.sqlDB.Exec(createSchemaVersions); err != nil {
+	if _, err := d.sqlDB.Exec(createSchemaVersionsSQL(d.dialect)); err != nil {
 		return fmt.Errorf("creating schema_versions: %w", err)
 	}
 	return nil
@@ -43,9 +49,11 @@ func ensureSchemaVersions(d *DB) error {
 // without tracking — detected by the presence of the "users" table.
 func isExistingDatabase(d *DB) (bool, error) {
 	var name string
-	err := d.sqlDB.QueryRow(
-		"SELECT name FROM sqlite_master WHERE type='table' AND name='users'",
-	).Scan(&name)
+	query := "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'users'"
+	if d.dialect == DialectSQLite {
+		query = "SELECT name FROM sqlite_master WHERE type='table' AND name='users'"
+	}
+	err := d.sqlDB.QueryRow(query).Scan(&name)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return false, nil
@@ -58,9 +66,11 @@ func isExistingDatabase(d *DB) (bool, error) {
 // schemaVersionsExists reports whether the schema_versions table is present.
 func schemaVersionsExists(d *DB) (bool, error) {
 	var name string
-	err := d.sqlDB.QueryRow(
-		"SELECT name FROM sqlite_master WHERE type='table' AND name='schema_versions'",
-	).Scan(&name)
+	query := "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'schema_versions'"
+	if d.dialect == DialectSQLite {
+		query = "SELECT name FROM sqlite_master WHERE type='table' AND name='schema_versions'"
+	}
+	err := d.sqlDB.QueryRow(query).Scan(&name)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return false, nil
@@ -322,5 +332,10 @@ func isCommentOnly(s string) bool {
 // isDuplicateColumn reports whether a SQLite error indicates a duplicate
 // column name from an ALTER TABLE ADD COLUMN statement.
 func isDuplicateColumn(err error) bool {
-	return err != nil && strings.Contains(err.Error(), "duplicate column name")
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "duplicate column name") ||
+		strings.Contains(msg, "already exists")
 }

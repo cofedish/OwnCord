@@ -84,7 +84,7 @@ func run(log *slog.Logger, logBuf *admin.RingBuffer) error {
 	printBanner(cfg, version, tlsCfg != nil)
 
 	// ── 4. Open database + run migrations ─────────────────────────────────
-	database, err := db.Open(cfg.Database.Path)
+	database, err := db.OpenConfig(cfg.Database)
 	if err != nil {
 		return fmt.Errorf("opening database: %w", err)
 	}

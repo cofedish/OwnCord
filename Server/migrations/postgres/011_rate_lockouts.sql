@@ -1,0 +1,1 @@
+-- Integrated into 001_initial_schema.sql for the PostgreSQL baseline.
