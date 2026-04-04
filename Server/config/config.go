@@ -19,12 +19,14 @@ import (
 
 // Config holds the full server configuration.
 type Config struct {
-	Server   ServerConfig   `koanf:"server"`
-	Database DatabaseConfig `koanf:"database"`
-	TLS      TLSConfig      `koanf:"tls"`
-	Upload   UploadConfig   `koanf:"upload"`
-	Voice    VoiceConfig    `koanf:"voice"`
-	GitHub   GitHubConfig   `koanf:"github"`
+	Server        ServerConfig        `koanf:"server"`
+	Database      DatabaseConfig      `koanf:"database"`
+	Redis         RedisConfig         `koanf:"redis"`
+	ObjectStorage ObjectStorageConfig `koanf:"object_storage"`
+	TLS           TLSConfig           `koanf:"tls"`
+	Upload        UploadConfig        `koanf:"upload"`
+	Voice         VoiceConfig         `koanf:"voice"`
+	GitHub        GitHubConfig        `koanf:"github"`
 }
 
 // GitHubConfig holds GitHub API settings for update checking.
@@ -56,7 +58,34 @@ type ServerConfig struct {
 
 // DatabaseConfig holds database settings.
 type DatabaseConfig struct {
-	Path string `koanf:"path"`
+	Driver                 string `koanf:"driver"`
+	URL                    string `koanf:"url"`
+	Path                   string `koanf:"path"`
+	MaxOpenConns           int    `koanf:"max_open_conns"`
+	MaxIdleConns           int    `koanf:"max_idle_conns"`
+	ConnMaxLifetimeMinutes int    `koanf:"conn_max_lifetime_minutes"`
+}
+
+// RedisConfig holds Redis settings for rate limits, presence, cache,
+// coordination, and other ephemeral state.
+type RedisConfig struct {
+	Addr     string `koanf:"addr"`
+	Password string `koanf:"password"`
+	DB       int    `koanf:"db"`
+	KeyPrefix string `koanf:"key_prefix"`
+}
+
+// ObjectStorageConfig holds S3-compatible object storage settings for uploads
+// and other binary assets.
+type ObjectStorageConfig struct {
+	Provider       string `koanf:"provider"`
+	Endpoint       string `koanf:"endpoint"`
+	Region         string `koanf:"region"`
+	Bucket         string `koanf:"bucket"`
+	AccessKey      string `koanf:"access_key"`
+	SecretKey      string `koanf:"secret_key"`
+	UseSSL         bool   `koanf:"use_ssl"`
+	ForcePathStyle bool   `koanf:"force_path_style"`
 }
 
 // TLSConfig holds TLS/certificate settings.
@@ -89,7 +118,27 @@ func defaults() Config {
 			},
 		},
 		Database: DatabaseConfig{
-			Path: "data/chatserver.db",
+			Driver:                 "postgres",
+			URL:                    "postgres://owncord:owncord-change-me@postgres:5432/owncord?sslmode=disable",
+			Path:                   "data/chatserver.db",
+			MaxOpenConns:           25,
+			MaxIdleConns:           25,
+			ConnMaxLifetimeMinutes: 30,
+		},
+		Redis: RedisConfig{
+			Addr:      "redis:6379",
+			DB:        0,
+			KeyPrefix: "owncord:",
+		},
+		ObjectStorage: ObjectStorageConfig{
+			Provider:       "s3",
+			Endpoint:       "minio:9000",
+			Region:         "us-east-1",
+			Bucket:         "owncord",
+			AccessKey:      "owncord",
+			SecretKey:      "owncord-change-me",
+			UseSSL:         false,
+			ForcePathStyle: true,
 		},
 		TLS: TLSConfig{
 			Mode:         "self_signed",
@@ -122,7 +171,28 @@ server:
   #   - "::1/128"
 
 database:
+  driver: "postgres"
+  url: "postgres://owncord:owncord-change-me@postgres:5432/owncord?sslmode=disable"
   path: "data/chatserver.db"
+  max_open_conns: 25
+  max_idle_conns: 25
+  conn_max_lifetime_minutes: 30
+
+redis:
+  addr: "redis:6379"
+  password: ""
+  db: 0
+  key_prefix: "owncord:"
+
+object_storage:
+  provider: "s3"
+  endpoint: "minio:9000"
+  region: "us-east-1"
+  bucket: "owncord"
+  access_key: "owncord"
+  secret_key: "owncord-change-me"
+  use_ssl: false
+  force_path_style: true
 
 tls:
   mode: "self_signed"  # self_signed, acme, manual, off

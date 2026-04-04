@@ -5,6 +5,7 @@
 - Use the Docker stack or another Linux deployment with a real reverse proxy.
 - Terminate public TLS at Caddy/Nginx/Traefik with a valid certificate.
 - Keep OwnCord itself on a private listener only.
+- Use PostgreSQL, Redis, and S3-compatible object storage as first-class infrastructure.
 - Keep `/admin` off the public internet.
 - Do not use self-signed public TLS for real users.
 
@@ -20,9 +21,10 @@
 
 At minimum back up:
 
-- `deploy/runtime/data/chatserver.db`
-- `deploy/runtime/data/uploads/`
-- `deploy/runtime/data/backups/`
+- PostgreSQL dumps or physical volume backups from `deploy/runtime/postgres/`
+- Redis only if you intentionally rely on persisted Redis state
+- object data from `deploy/runtime/minio-data/`
+- app-local data from `deploy/runtime/data/` while the persistence migration is still in flight
 - `deploy/runtime/caddy-data/`
 
 Example:
@@ -40,7 +42,7 @@ tar -C deploy/runtime -czf owncord-backup-$(date +%F).tar.gz data caddy-data
 
 ## Operational caveats
 
-- SQLite is still a single-writer database. This is fine for hobby/small-home use, but it is not a strong scaling story.
+- The target architecture for this fork is PostgreSQL + Redis + object storage. The application migration is being moved onto that stack and should not stop at SQLite/local-files.
 - The desktop client now expects valid TLS for REST/media paths. For production this is the intended behavior.
 - `/admin` now uses an `HttpOnly` cookie-backed session instead of `localStorage`.
 - Linux/container deployments should update via image rebuilds, not the built-in server updater.

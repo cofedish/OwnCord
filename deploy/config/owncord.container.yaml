@@ -13,7 +13,28 @@ server:
     - "172.30.0.0/24"
 
 database:
+  driver: "postgres"
+  url: "postgres://owncord:owncord-change-me@postgres:5432/owncord?sslmode=disable"
   path: "/app/data/chatserver.db"
+  max_open_conns: 25
+  max_idle_conns: 25
+  conn_max_lifetime_minutes: 30
+
+redis:
+  addr: "redis:6379"
+  password: "owncord-change-me"
+  db: 0
+  key_prefix: "owncord:"
+
+object_storage:
+  provider: "s3"
+  endpoint: "minio:9000"
+  region: "us-east-1"
+  bucket: "owncord"
+  access_key: "owncord"
+  secret_key: "owncord-change-me"
+  use_ssl: false
+  force_path_style: true
 
 tls:
   mode: "off"

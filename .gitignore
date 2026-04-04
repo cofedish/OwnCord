@@ -28,6 +28,12 @@ Server/config.yaml
 Server/data/
 deploy/runtime/data/*
 !deploy/runtime/data/.gitkeep
+deploy/runtime/postgres/*
+!deploy/runtime/postgres/.gitkeep
+deploy/runtime/minio-data/*
+!deploy/runtime/minio-data/.gitkeep
+deploy/runtime/redis/*
+!deploy/runtime/redis/.gitkeep
 deploy/runtime/caddy-data/*
 !deploy/runtime/caddy-data/.gitkeep
 deploy/runtime/caddy-config/*

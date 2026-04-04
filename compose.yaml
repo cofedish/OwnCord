@@ -1,6 +1,82 @@
 name: owncord
 
 services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: owncord-postgres
+    restart: unless-stopped
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_DB: ${OWNCORD_DB_NAME:-owncord}
+      POSTGRES_USER: ${OWNCORD_DB_USER:-owncord}
+      POSTGRES_PASSWORD: ${OWNCORD_DB_PASSWORD:-owncord-change-me}
+    volumes:
+      - ./deploy/runtime/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${OWNCORD_DB_USER:-owncord} -d ${OWNCORD_DB_NAME:-owncord}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      owncord-internal:
+        ipv4_address: 172.30.0.20
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: owncord-redis
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --requirepass
+      - ${OWNCORD_REDIS_PASSWORD:-owncord-change-me}
+    volumes:
+      - ./deploy/runtime/redis:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a ${OWNCORD_REDIS_PASSWORD:-owncord-change-me} ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      owncord-internal:
+        ipv4_address: 172.30.0.30
+
+  minio:
+    image: minio/minio:RELEASE.2025-02-28T09-55-16Z
+    container_name: owncord-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${OWNCORD_S3_ACCESS_KEY:-owncord}
+      MINIO_ROOT_PASSWORD: ${OWNCORD_S3_SECRET_KEY:-owncord-change-me}
+    ports:
+      - "127.0.0.1:${OWNCORD_MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - ./deploy/runtime/minio-data:/data
+    networks:
+      owncord-internal:
+        ipv4_address: 172.30.0.40
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-03-12T17-29-24Z
+    container_name: owncord-minio-init
+    restart: "no"
+    depends_on:
+      minio:
+        condition: service_started
+    entrypoint:
+      - /bin/sh
+      - -c
+      - >
+        until mc alias set owncord http://minio:9000 "${OWNCORD_S3_ACCESS_KEY:-owncord}" "${OWNCORD_S3_SECRET_KEY:-owncord-change-me}"; do sleep 1; done &&
+        mc mb --ignore-existing owncord/${OWNCORD_S3_BUCKET:-owncord}
+    networks:
+      owncord-internal:
+        ipv4_address: 172.30.0.41
+
   owncord:
     build:
       context: .
@@ -10,6 +86,27 @@ services:
     image: owncord-server:${OWNCORD_VERSION:-dev}
     container_name: owncord-server
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    environment:
+      OWNCORD_DATABASE_DRIVER: postgres
+      OWNCORD_DATABASE_URL: postgres://${OWNCORD_DB_USER:-owncord}:${OWNCORD_DB_PASSWORD:-owncord-change-me}@postgres:5432/${OWNCORD_DB_NAME:-owncord}?sslmode=disable
+      OWNCORD_REDIS_ADDR: redis:6379
+      OWNCORD_REDIS_PASSWORD: ${OWNCORD_REDIS_PASSWORD:-owncord-change-me}
+      OWNCORD_REDIS_DB: 0
+      OWNCORD_OBJECT_STORAGE_PROVIDER: s3
+      OWNCORD_OBJECT_STORAGE_ENDPOINT: minio:9000
+      OWNCORD_OBJECT_STORAGE_REGION: ${OWNCORD_S3_REGION:-us-east-1}
+      OWNCORD_OBJECT_STORAGE_BUCKET: ${OWNCORD_S3_BUCKET:-owncord}
+      OWNCORD_OBJECT_STORAGE_ACCESS_KEY: ${OWNCORD_S3_ACCESS_KEY:-owncord}
+      OWNCORD_OBJECT_STORAGE_SECRET_KEY: ${OWNCORD_S3_SECRET_KEY:-owncord-change-me}
+      OWNCORD_OBJECT_STORAGE_USE_SSL: "false"
+      OWNCORD_OBJECT_STORAGE_FORCE_PATH_STYLE: "true"
     ports:
       - "127.0.0.1:${OWNCORD_ADMIN_PORT:-8080}:8080"
     volumes:
@@ -52,4 +149,3 @@ networks:
     ipam:
       config:
         - subnet: 172.30.0.0/24
-
