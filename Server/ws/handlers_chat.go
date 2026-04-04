@@ -163,7 +163,7 @@ func (h *Hub) linkAttachments(c *Client, msgID int64, attIDs []string) ([]map[st
 		return nil, true
 	}
 
-	linked, linkErr := h.db.LinkAttachmentsToMessage(msgID, attIDs)
+	linked, linkErr := h.db.LinkAttachmentsToMessage(msgID, c.userID, attIDs)
 	if linkErr != nil {
 		slog.Error("ws handleChatSend LinkAttachments", "err", linkErr, "msg_id", msgID)
 		if delErr := h.db.DeleteMessage(msgID, c.userID, true); delErr != nil {

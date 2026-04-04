@@ -574,8 +574,8 @@ func TestServeFile_Success(t *testing.T) {
 
 	// Verify cache control header.
 	cc := rr2.Header().Get("Cache-Control")
-	if cc != "public, max-age=31536000, immutable" {
-		t.Errorf("Cache-Control = %q, want 'public, max-age=31536000, immutable'", cc)
+	if cc != "private, no-store" {
+		t.Errorf("Cache-Control = %q, want 'private, no-store'", cc)
 	}
 
 	// Verify Content-Disposition header.

@@ -136,6 +136,7 @@ func handleSetup(database *db.DB, limiter *auth.RateLimiter, allowedOrigins []st
 			writeErr(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to create session")
 			return
 		}
+		setAdminSessionCookie(w, r, token)
 
 		// Create default channels under canonical categories.
 		_, _ = database.CreateChannel("general", "text", "Text Channels", "Welcome to the server!", 0)

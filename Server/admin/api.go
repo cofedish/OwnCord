@@ -34,6 +34,9 @@ func NewAdminAPI(database *db.DB, version string, hub HubBroadcaster, u *updater
 	r.Group(func(r chi.Router) {
 		r.Use(adminAuthMiddleware(database))
 
+		r.Post("/session/exchange", handleExchangeSessionCookie())
+		r.Post("/session/logout", handleSessionLogout(database))
+
 		// Log stream ticket — issues a single-use, 30s TTL ticket for SSE auth.
 		r.Post("/logs/ticket", handleLogTicket(database))
 

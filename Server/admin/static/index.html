@@ -281,7 +281,7 @@ const I={
 
 /* ═══ State ═══ */
 const PAGE_SIZE=50;
-const state={section:'dashboard',token:localStorage.getItem('admin_token')||'',
+const state={section:'dashboard',
   usersPage:1,auditPage:1,auditSearch:'',auditActionFilter:'all',auditCache:[],settingsChanged:false,backupRunning:false,updateApplying:false,
   cachedStats:null,cachedUpdate:null,
   logEntries:[],logLevels:{DEBUG:true,INFO:true,WARN:true,ERROR:true},
@@ -289,8 +289,8 @@ const state={section:'dashboard',token:localStorage.getItem('admin_token')||'',
 
 /* ═══ API ═══ */
 async function api(method,path,body){
-  const opts={method,headers:{'Authorization':'Bearer '+state.token,'Content-Type':'application/json'}};
-  if(body!==undefined)opts.body=JSON.stringify(body);
+  const opts={method,credentials:'same-origin',headers:{}};
+  if(body!==undefined){opts.headers['Content-Type']='application/json';opts.body=JSON.stringify(body);}
   const res=await fetch('/admin/api'+path,opts);
   if(res.status===204)return null;
   const data=await res.json();
@@ -330,7 +330,6 @@ function showApp(){hideAll();document.getElementById('adminShell').classList.rem
 
 async function checkAuth(){
   try{const r=await fetch('/admin/api/setup/status');const d=await r.json();if(d.needs_setup){showOverlay('setupOverlay');return}}catch(e){console.error('setup check:',e)}
-  if(!state.token){showOverlay('loginOverlay');return}
   try{await api('GET','/stats');showApp();renderNav();renderContent()}catch(e){showOverlay('loginOverlay')}
 }
 
@@ -339,8 +338,7 @@ document.getElementById('setupBtn').onclick=async()=>{
   err.textContent='';
   if(!u||!p){err.textContent='Username and password are required.';return}
   if(p!==c){err.textContent='Passwords do not match.';return}
-  try{const r=await fetch('/admin/api/setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});const d=await r.json();if(!r.ok)throw new Error(d.message||'Setup failed');
-    state.token=d.token;localStorage.setItem('admin_token',state.token);
+  try{const r=await fetch('/admin/api/setup',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});const d=await r.json();if(!r.ok)throw new Error(d.message||'Setup failed');
     document.getElementById('inviteCode').textContent=d.invite_code;showOverlay('setupSuccessOverlay');
   }catch(e){err.textContent=e.message}
 };
@@ -350,8 +348,12 @@ function copyInvite(){navigator.clipboard.writeText(document.getElementById('inv
 document.getElementById('loginBtn').onclick=async()=>{
   const u=document.getElementById('loginUser').value.trim(),p=document.getElementById('loginPass').value,err=document.getElementById('loginErr');
   err.textContent='';
-  try{const r=await fetch('/api/v1/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});const d=await r.json();if(!r.ok)throw new Error(d.message||'Login failed');
-    state.token=d.token;localStorage.setItem('admin_token',state.token);showApp();renderNav();renderContent();
+  try{const r=await fetch('/api/v1/auth/login',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});const d=await r.json();if(!r.ok)throw new Error(d.message||'Login failed');
+    if(d.requires_2fa){throw new Error('Two-factor authentication is not supported in the admin panel yet. Use a non-admin client to complete login.')}
+    if(!d.token){throw new Error('Login response did not include a session token')}
+    const exchange=await fetch('/admin/api/session/exchange',{method:'POST',credentials:'same-origin',headers:{'Authorization':'Bearer '+d.token}});
+    if(!exchange.ok){let msg='Failed to start admin session';try{const body=await exchange.json();msg=body.message||msg}catch(e){}throw new Error(msg)}
+    showApp();renderNav();renderContent();
   }catch(e){err.textContent=e.message}
 };
 
@@ -398,7 +400,7 @@ function navigateTo(id){
   }
 }
 
-function doLogout(){state.logConnectSeq++;if(state.logEventSource){state.logEventSource.close();state.logEventSource=null}if(state.logReconnectTimer){clearTimeout(state.logReconnectTimer);state.logReconnectTimer=null}state.token='';localStorage.removeItem('admin_token');showOverlay('loginOverlay')}
+async function doLogout(){state.logConnectSeq++;if(state.logEventSource){state.logEventSource.close();state.logEventSource=null}if(state.logReconnectTimer){clearTimeout(state.logReconnectTimer);state.logReconnectTimer=null}try{await fetch('/admin/api/session/logout',{method:'POST',credentials:'same-origin'})}catch(e){}showOverlay('loginOverlay')}
 
 /* ═══ Content Router ═══ */
 function renderContent(){
@@ -425,7 +427,7 @@ function renderContent(){
 /* ═══ Dashboard ═══ */
 async function renderDashboard(){
   try{state.cachedStats=await api('GET','/stats')}catch(e){return'<div class="page-title">Dashboard</div><p style="color:var(--red)">Failed to load stats: '+esc(e.message)+'</p>'}
-  try{const r=await fetch('/admin/api/updates',{headers:{'Authorization':'Bearer '+state.token}});if(r.ok)state.cachedUpdate=await r.json()}catch(e){}
+  try{const r=await fetch('/admin/api/updates',{credentials:'same-origin'});if(r.ok)state.cachedUpdate=await r.json()}catch(e){}
   const s=state.cachedStats;const u=state.cachedUpdate;
   let html='<div class="page-title">Dashboard</div><div class="page-desc">Server overview and statistics</div>';
   if(u&&u.update_available)html+='<div class="update-card" style="border-color:var(--accent);margin-bottom:20px"><div class="update-icon" style="background:var(--accent-glow);color:var(--accent)">'+I.updates+'</div><div class="update-info"><div class="update-ver">Update Available: '+esc(u.latest)+'</div><div class="update-notes">Current: '+esc(u.current)+' &mdash; <button class="btn btn-accent" style="margin-left:8px" onclick="navigateTo(\'updates\')">View Update</button></div></div></div>';
@@ -694,7 +696,7 @@ async function connectLogStream(){
   if(state.logPaused||state.section!=='logs')return;
   const connectSeq=++state.logConnectSeq;
   let ticket;
-  try{const res=await api('POST','/logs/ticket');ticket=res.ticket}catch(err){const t=document.getElementById('logStatusText');const d=document.getElementById('logDot');const msg=(err&&err.message)||'';if(/authorization|invalid or expired session|session has expired|missing or invalid|administrator permission required/i.test(msg)){state.logPaused=true;state.logConnectSeq++;if(state.logReconnectTimer){clearTimeout(state.logReconnectTimer);state.logReconnectTimer=null}if(state.logEventSource){state.logEventSource.close();state.logEventSource=null}state.token='';localStorage.removeItem('admin_token');if(t)t.textContent='Session expired';if(d)d.className='dot-off';showOverlay('loginOverlay');return}if(t)t.textContent='Reconnect failed';if(d)d.className='dot-off';scheduleLogReconnect();return}
+  try{const res=await api('POST','/logs/ticket');ticket=res.ticket}catch(err){const t=document.getElementById('logStatusText');const d=document.getElementById('logDot');const msg=(err&&err.message)||'';if(/authorization|invalid or expired session|session has expired|missing or invalid|administrator permission required/i.test(msg)){state.logPaused=true;state.logConnectSeq++;if(state.logReconnectTimer){clearTimeout(state.logReconnectTimer);state.logReconnectTimer=null}if(state.logEventSource){state.logEventSource.close();state.logEventSource=null}if(t)t.textContent='Session expired';if(d)d.className='dot-off';showOverlay('loginOverlay');return}if(t)t.textContent='Reconnect failed';if(d)d.className='dot-off';scheduleLogReconnect();return}
   if(connectSeq!==state.logConnectSeq||state.logPaused||state.section!=='logs')return;
   const es=new EventSource('/admin/api/logs/stream?ticket='+encodeURIComponent(ticket));
   state.logEventSource=es;
@@ -812,13 +814,13 @@ async function confirmRestore(name){
 }
 
 async function confirmDeleteBackup(name){
-  try{await fetch('/admin/api/backups/'+encodeURIComponent(name),{method:'DELETE',headers:{'Authorization':'Bearer '+state.token}});showToast('Backup deleted');renderContent()}catch(e){showToast(e.message,'error')}
+  try{await fetch('/admin/api/backups/'+encodeURIComponent(name),{method:'DELETE',credentials:'same-origin'});showToast('Backup deleted');renderContent()}catch(e){showToast(e.message,'error')}
 }
 
 /* ═══ Updates ═══ */
 async function renderUpdates(){
   let info;
-  try{const r=await fetch('/admin/api/updates',{headers:{'Authorization':'Bearer '+state.token}});if(r.ok)info=await r.json()}catch(e){}
+  try{const r=await fetch('/admin/api/updates',{credentials:'same-origin'});if(r.ok)info=await r.json()}catch(e){}
   let html='<div class="page-title">Updates</div><div class="page-desc">Server version management</div>';
   html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">';
   html+='<div class="update-card"><div class="update-icon" style="background:rgba(35,165,90,.15);color:var(--green)">'+I.check+'</div><div class="update-info"><div class="update-ver">'+(info?esc(info.current):'unknown')+'</div><div class="update-notes">Current version</div></div></div>';
@@ -841,7 +843,7 @@ async function applyUpdate(){
 async function confirmApplyUpdate(){
   closeModal();state.updateApplying=true;renderContent();
   try{
-    const r=await fetch('/admin/api/updates/apply',{method:'POST',headers:{'Authorization':'Bearer '+state.token}});
+    const r=await fetch('/admin/api/updates/apply',{method:'POST',credentials:'same-origin'});
     if(r.ok){showToast('Update applied! Server restarting...','info');setTimeout(()=>location.reload(),10000)}
     else{const e=await r.json();showToast(e.message||'Update failed','error')}
   }catch(e){showToast(e.message,'error')}

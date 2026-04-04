@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS audit_log (
 
 CREATE TABLE IF NOT EXISTS attachments (
     id          TEXT    PRIMARY KEY,
+    uploader_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     message_id  INTEGER REFERENCES messages(id) ON DELETE CASCADE,
     filename    TEXT    NOT NULL,
     stored_as   TEXT    NOT NULL,

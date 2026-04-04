@@ -93,21 +93,23 @@ func (d *DB) GetAttachmentWithChannel(id string) (*AttachmentAccess, error) {
 // LinkAttachmentsToMessage sets message_id on attachments that are currently
 // unlinked (message_id IS NULL). Returns the number of rows updated.
 // Uses WHERE message_id IS NULL to prevent double-linking in a race.
-func (d *DB) LinkAttachmentsToMessage(messageID int64, attachmentIDs []string) (int64, error) {
+func (d *DB) LinkAttachmentsToMessage(messageID, uploaderID int64, attachmentIDs []string) (int64, error) {
 	if len(attachmentIDs) == 0 {
 		return 0, nil
 	}
 
 	placeholders := make([]string, len(attachmentIDs))
-	args := make([]any, 0, len(attachmentIDs)+1)
-	args = append(args, messageID)
+	args := make([]any, 0, len(attachmentIDs)+2)
+	args = append(args, messageID, uploaderID)
 	for i, id := range attachmentIDs {
 		placeholders[i] = "?"
 		args = append(args, id)
 	}
 
 	query := fmt.Sprintf( //nolint:gosec // G201: placeholder interpolation, not user input
-		`UPDATE attachments SET message_id = ? WHERE id IN (%s) AND message_id IS NULL`,
+		`UPDATE attachments
+		 SET message_id = ?
+		 WHERE uploader_id = ? AND id IN (%s) AND message_id IS NULL`,
 		strings.Join(placeholders, ","),
 	)
 	res, err := d.sqlDB.Exec(query, args...)

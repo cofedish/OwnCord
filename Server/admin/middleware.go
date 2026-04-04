@@ -3,6 +3,7 @@ package admin
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/owncord/server/auth"
 	"github.com/owncord/server/db"
@@ -18,6 +19,15 @@ func adminAuthMiddleware(database *db.DB) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token, ok := auth.ExtractBearerToken(r)
+			if !ok {
+				if cookie, err := r.Cookie(adminSessionCookieName); err == nil {
+					candidate := strings.TrimSpace(cookie.Value)
+					if candidate != "" {
+						token = candidate
+						ok = true
+					}
+				}
+			}
 			if !ok {
 				writeErr(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing or invalid authorization header")
 				return

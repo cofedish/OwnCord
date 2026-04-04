@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
@@ -18,6 +19,10 @@ import (
 // handleCheckUpdate returns the current update status.
 func handleCheckUpdate(u *updater.Updater) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if runtime.GOOS != "windows" {
+			writeErr(w, http.StatusServiceUnavailable, "UPDATE_UNAVAILABLE", "in-place server updates are only supported on Windows binaries")
+			return
+		}
 		if u == nil {
 			writeErr(w, http.StatusServiceUnavailable, "UPDATE_UNAVAILABLE", "update checking is not configured")
 			return
@@ -35,6 +40,10 @@ func handleCheckUpdate(u *updater.Updater) http.HandlerFunc {
 // handleApplyUpdate downloads and applies a server update.
 func handleApplyUpdate(u *updater.Updater, hub HubBroadcaster, _ string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if runtime.GOOS != "windows" {
+			writeErr(w, http.StatusServiceUnavailable, "UPDATE_UNAVAILABLE", "in-place server updates are only supported on Windows binaries")
+			return
+		}
 		if u == nil {
 			writeErr(w, http.StatusServiceUnavailable, "UPDATE_UNAVAILABLE", "update checking is not configured")
 			return
@@ -69,6 +78,10 @@ func handleApplyUpdate(u *updater.Updater, hub HubBroadcaster, _ string) http.Ha
 		exePath, err = filepath.EvalSymlinks(exePath)
 		if err != nil {
 			writeErr(w, http.StatusInternalServerError, "INTERNAL_ERROR", "cannot resolve executable path")
+			return
+		}
+		if !strings.EqualFold(filepath.Ext(exePath), ".exe") {
+			writeErr(w, http.StatusServiceUnavailable, "UPDATE_UNAVAILABLE", "server updater expects a Windows .exe binary")
 			return
 		}
 

@@ -304,7 +304,7 @@ func SecurityHeadersWithTLS(tlsMode string) func(http.Handler) http.Handler {
 			h.Set("Content-Security-Policy", "default-src 'self'")
 			h.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
 			h.Set("Cache-Control", "no-store")
-			if tlsMode != "" {
+			if tlsMode != "" && tlsMode != "off" {
 				h.Set("Strict-Transport-Security", fmt.Sprintf("max-age=%d; includeSubDomains", hstsMaxAgeSeconds))
 			}
 			next.ServeHTTP(w, r)

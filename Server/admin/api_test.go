@@ -172,6 +172,24 @@ func createMemberUser(t *testing.T, database *db.DB) string {
 
 func doRequest(t *testing.T, handler http.Handler, method, path, token string, body any) *httptest.ResponseRecorder {
 	t.Helper()
+	req := newRequestWithCookie(t, method, path, "", "", body)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	return w
+}
+
+func newRequestWithCookie(
+	t *testing.T,
+	method,
+	path,
+	cookieName,
+	cookieValue string,
+	body any,
+) *http.Request {
+	t.Helper()
 	var bodyBytes []byte
 	if body != nil {
 		var err error
@@ -182,13 +200,16 @@ func doRequest(t *testing.T, handler http.Handler, method, path, token string, b
 	}
 
 	req := httptest.NewRequest(method, path, bytes.NewReader(bodyBytes))
-	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
+	if cookieName != "" {
+		req.AddCookie(&http.Cookie{Name: cookieName, Value: cookieValue, Path: "/admin"})
 	}
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
+	return req
+}
 
+func serveAdminRequest(handler http.Handler, req *http.Request) *httptest.ResponseRecorder {
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 	return w

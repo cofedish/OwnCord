@@ -289,7 +289,9 @@ func handleServeFile(database *db.DB, store *storage.Storage, allowedOrigins []s
 			disposition = "attachment"
 		}
 		w.Header().Set("Content-Disposition", mime.FormatMediaType(disposition, map[string]string{"filename": aa.Filename}))
-		w.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%d, immutable", fileCacheMaxAgeSeconds))
+		// These files are always served behind authentication and channel/DM ACLs.
+		// Mark them private and non-storable so shared caches cannot retain them.
+		w.Header().Set("Cache-Control", "private, no-store")
 		// CORS: allow webview to read the response body using configured origins.
 		if origin := r.Header.Get("Origin"); origin != "" {
 			for _, allowed := range allowedOrigins {

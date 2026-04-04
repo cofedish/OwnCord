@@ -84,6 +84,21 @@ func TestSetup_CreatesOwner(t *testing.T) {
 	if resp.UserID == 0 {
 		t.Error("user_id is 0")
 	}
+	foundCookie := false
+	for _, cookie := range rr.Result().Cookies() {
+		if cookie.Name == "owncord_admin_session" {
+			foundCookie = true
+			if !cookie.HttpOnly {
+				t.Error("setup cookie should be HttpOnly")
+			}
+			if cookie.SameSite != http.SameSiteStrictMode {
+				t.Errorf("setup cookie SameSite = %v, want Strict", cookie.SameSite)
+			}
+		}
+	}
+	if !foundCookie {
+		t.Error("setup response did not set admin session cookie")
+	}
 
 	// Verify user was created with Owner role.
 	user, err := database.GetUserByUsername("myadmin")

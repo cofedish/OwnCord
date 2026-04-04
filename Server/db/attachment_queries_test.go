@@ -57,7 +57,7 @@ func TestGetAttachmentByID_Found(t *testing.T) {
 func TestLinkAttachmentsToMessage_Empty(t *testing.T) {
 	database := openMigratedMemory(t)
 
-	n, err := database.LinkAttachmentsToMessage(1, nil)
+	n, err := database.LinkAttachmentsToMessage(1, 1, nil)
 	if err != nil {
 		t.Fatalf("LinkAttachmentsToMessage(nil): %v", err)
 	}
@@ -75,16 +75,16 @@ func TestLinkAttachmentsToMessage_LinksUnlinked(t *testing.T) {
 	// Insert two unlinked attachments.
 	for _, id := range []string{"att-a", "att-b"} {
 		_, err := database.Exec(
-			`INSERT INTO attachments (id, filename, stored_as, mime_type, size)
-			 VALUES (?, ?, ?, ?, ?)`,
-			id, "file.txt", "stored.txt", "text/plain", 100,
+			`INSERT INTO attachments (id, uploader_id, filename, stored_as, mime_type, size)
+			 VALUES (?, ?, ?, ?, ?, ?)`,
+			id, userID, "file.txt", "stored.txt", "text/plain", 100,
 		)
 		if err != nil {
 			t.Fatalf("inserting attachment %s: %v", id, err)
 		}
 	}
 
-	n, err := database.LinkAttachmentsToMessage(msgID, []string{"att-a", "att-b"})
+	n, err := database.LinkAttachmentsToMessage(msgID, userID, []string{"att-a", "att-b"})
 	if err != nil {
 		t.Fatalf("LinkAttachmentsToMessage: %v", err)
 	}
@@ -107,18 +107,51 @@ func TestLinkAttachmentsToMessage_SkipsAlreadyLinked(t *testing.T) {
 	msg2, _ := database.CreateMessage(chID, userID, "msg2", nil)
 
 	_, _ = database.Exec(
-		`INSERT INTO attachments (id, filename, stored_as, mime_type, size, message_id)
-		 VALUES (?, ?, ?, ?, ?, ?)`,
-		"att-linked", "file.txt", "stored.txt", "text/plain", 100, msg1,
+		`INSERT INTO attachments (id, uploader_id, filename, stored_as, mime_type, size, message_id)
+		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		"att-linked", userID, "file.txt", "stored.txt", "text/plain", 100, msg1,
 	)
 
 	// Try to re-link to a different message — should skip (WHERE message_id IS NULL).
-	n, err := database.LinkAttachmentsToMessage(msg2, []string{"att-linked"})
+	n, err := database.LinkAttachmentsToMessage(msg2, userID, []string{"att-linked"})
 	if err != nil {
 		t.Fatalf("LinkAttachmentsToMessage: %v", err)
 	}
 	if n != 0 {
 		t.Errorf("expected 0 rows (already linked), got %d", n)
+	}
+}
+
+func TestLinkAttachmentsToMessage_RejectsForeignAttachment(t *testing.T) {
+	database := openMigratedMemory(t)
+	ownerID := seedUser(t, database, "owner")
+	otherID := seedUser(t, database, "other")
+	chID := seedChannel(t, database, "foreign-link")
+	msgID, _ := database.CreateMessage(chID, ownerID, "with attachment", nil)
+
+	_, err := database.Exec(
+		`INSERT INTO attachments (id, uploader_id, filename, stored_as, mime_type, size)
+		 VALUES (?, ?, ?, ?, ?, ?)`,
+		"att-foreign", otherID, "file.txt", "stored.txt", "text/plain", 100,
+	)
+	if err != nil {
+		t.Fatalf("inserting attachment: %v", err)
+	}
+
+	n, err := database.LinkAttachmentsToMessage(msgID, ownerID, []string{"att-foreign"})
+	if err != nil {
+		t.Fatalf("LinkAttachmentsToMessage: %v", err)
+	}
+	if n != 0 {
+		t.Errorf("expected 0 rows affected for foreign attachment, got %d", n)
+	}
+
+	att, err := database.GetAttachmentByID("att-foreign")
+	if err != nil {
+		t.Fatalf("GetAttachmentByID: %v", err)
+	}
+	if att.MessageID != nil {
+		t.Errorf("MessageID = %v, want nil", att.MessageID)
 	}
 }
 

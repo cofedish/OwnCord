@@ -84,12 +84,8 @@ func defaults() Config {
 			AllowedOrigins: []string{},
 			TrustedProxies: []string{},
 			AdminAllowedCIDRs: []string{
-				"127.0.0.0/8",    // localhost IPv4
-				"::1/128",        // localhost IPv6
-				"10.0.0.0/8",     // private class A
-				"172.16.0.0/12",  // private class B
-				"192.168.0.0/16", // private class C
-				"fc00::/7",       // IPv6 unique local
+				"127.0.0.0/8", // localhost IPv4
+				"::1/128",     // localhost IPv6
 			},
 		},
 		Database: DatabaseConfig{
@@ -121,12 +117,9 @@ server:
   data_dir: "data"
   # allowed_origins: []       # empty = deny cross-origin; set to ["*"] for dev or specific origins for prod
   # trusted_proxies: []       # CIDRs of trusted reverse proxies, e.g. ["10.0.0.0/8"]
-  # admin_allowed_cidrs:      # CIDRs allowed to access /admin (default: private networks only)
+  # admin_allowed_cidrs:      # CIDRs allowed to access /admin (default: localhost only)
   #   - "127.0.0.0/8"
   #   - "::1/128"
-  #   - "10.0.0.0/8"
-  #   - "172.16.0.0/12"
-  #   - "192.168.0.0/16"
 
 database:
   path: "data/chatserver.db"
