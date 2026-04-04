@@ -39,7 +39,9 @@ document.addEventListener("contextmenu", (e) => {
   e.preventDefault();
 });
 
-// F12 or Ctrl+Shift+I opens WebView2 DevTools.
+const DEVTOOLS_ENABLED = import.meta.env.DEV;
+
+// F12 or Ctrl+Shift+I opens WebView2 DevTools in development builds only.
 // F5 and Ctrl+R are blocked to prevent accidental page reloads which cause
 // ghost voice state (user appears in channel with no LiveKit connection).
 document.addEventListener("keydown", (e) => {
@@ -47,7 +49,7 @@ document.addEventListener("keydown", (e) => {
     e.preventDefault();
     return;
   }
-  if (e.key === "F12" || (e.ctrlKey && e.shiftKey && e.key === "I")) {
+  if (DEVTOOLS_ENABLED && (e.key === "F12" || (e.ctrlKey && e.shiftKey && e.key === "I"))) {
     e.preventDefault();
     void import("@tauri-apps/api/core").then(({ invoke }) => {
       void invoke("open_devtools");
@@ -85,7 +87,7 @@ if (!appEl) {
 
 // Create core services
 const router = createRouter("connect");
-const api = createApiClient({ host: "", allowSelfSigned: true }, () => {
+const api = createApiClient({ host: "" }, () => {
   log.warn("Session expired (401), clearing auth");
   clearAuth();
 });

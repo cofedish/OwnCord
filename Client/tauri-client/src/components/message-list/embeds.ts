@@ -184,13 +184,6 @@ function fetchOgMeta(url: string): Promise<OgMeta> {
           "User-Agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
         },
       };
-      if (isTrustedServerUrl(url)) {
-        (
-          fetchOpts as RequestInit & {
-            danger?: { acceptInvalidCerts: boolean; acceptInvalidHostnames: boolean };
-          }
-        ).danger = { acceptInvalidCerts: true, acceptInvalidHostnames: false };
-      }
       const res = await tauriFetch(url, fetchOpts);
       clearTimeout(timer);
 

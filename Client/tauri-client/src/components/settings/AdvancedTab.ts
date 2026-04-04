@@ -16,6 +16,7 @@ import { loadPref, savePref, createToggle } from "./helpers";
 
 const log = createLogger("AdvancedTab");
 const IMAGE_CACHE_DELETE_BLOCK_TIMEOUT_MS = 1000;
+const DEVTOOLS_ENABLED = import.meta.env.DEV;
 
 export function buildAdvancedTab(signal: AbortSignal): HTMLDivElement {
   const section = createElement("div", { class: "settings-pane active" });
@@ -66,32 +67,33 @@ export function buildAdvancedTab(signal: AbortSignal): HTMLDivElement {
   const debugTitle = createElement("div", { class: "settings-section-title" }, "Debug");
   section.appendChild(debugTitle);
 
-  // DevTools button row
-  const devtoolsRow = createElement("div", { class: "setting-row" });
-  const devtoolsInfo = createElement("div", {});
-  const devtoolsLabel = createElement("div", { class: "setting-label" }, "Open DevTools");
-  const devtoolsDesc = createElement(
-    "div",
-    { class: "setting-desc" },
-    "Open the browser developer tools for debugging",
-  );
-  appendChildren(devtoolsInfo, devtoolsLabel, devtoolsDesc);
+  if (DEVTOOLS_ENABLED) {
+    const devtoolsRow = createElement("div", { class: "setting-row" });
+    const devtoolsInfo = createElement("div", {});
+    const devtoolsLabel = createElement("div", { class: "setting-label" }, "Open DevTools");
+    const devtoolsDesc = createElement(
+      "div",
+      { class: "setting-desc" },
+      "Open the browser developer tools for debugging",
+    );
+    appendChildren(devtoolsInfo, devtoolsLabel, devtoolsDesc);
 
-  const devtoolsBtn = createElement("button", { class: "ac-btn" }, "Open DevTools");
-  devtoolsBtn.addEventListener(
-    "click",
-    () => {
-      void invoke("open_devtools").catch((err: unknown) => {
-        log.warn("DevTools not available", {
-          error: err instanceof Error ? err.message : String(err),
+    const devtoolsBtn = createElement("button", { class: "ac-btn" }, "Open DevTools");
+    devtoolsBtn.addEventListener(
+      "click",
+      () => {
+        void invoke("open_devtools").catch((err: unknown) => {
+          log.warn("DevTools not available", {
+            error: err instanceof Error ? err.message : String(err),
+          });
         });
-      });
-    },
-    { signal },
-  );
+      },
+      { signal },
+    );
 
-  appendChildren(devtoolsRow, devtoolsInfo, devtoolsBtn);
-  section.appendChild(devtoolsRow);
+    appendChildren(devtoolsRow, devtoolsInfo, devtoolsBtn);
+    section.appendChild(devtoolsRow);
+  }
 
   // ---- Storage & Cache section ------------------------------------------------
 

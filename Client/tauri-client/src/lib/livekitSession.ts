@@ -871,13 +871,14 @@ export class LiveKitSession {
 
 const session = new LiveKitSession();
 
-// Expose debug info on window under __owncord namespace for DevTools console access
-// Usage: JSON.stringify(__owncord.lkDebug(), null, 2)
-const owncordNs = ((window as unknown as Record<string, unknown>).__owncord ??= {}) as Record<
-  string,
-  unknown
->;
-owncordNs.lkDebug = session.getSessionDebugInfo.bind(session);
+if (import.meta.env.DEV) {
+  // Expose debug info only in development builds.
+  const owncordNs = ((window as unknown as Record<string, unknown>).__owncord ??= {}) as Record<
+    string,
+    unknown
+  >;
+  owncordNs.lkDebug = session.getSessionDebugInfo.bind(session);
+}
 
 export const setWsClient = session.setWsClient.bind(session);
 export const setServerHost = session.setServerHost.bind(session);

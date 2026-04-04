@@ -408,21 +408,15 @@ describe("fetchImageAsDataUrl — network fetch failure", () => {
     expect(result!.startsWith("data:image/jpeg;")).toBe(true);
   });
 
-  it("uses acceptInvalidCerts for server URLs only", async () => {
+  it("fetches attachments without disabling TLS validation", async () => {
     fetchMock.mockResolvedValue({
       ok: true,
       headers: { get: () => "image/png" },
       arrayBuffer: () => Promise.resolve(new Uint8Array([1]).buffer),
     });
 
-    // Fetch a server URL
     await fetchImageAsDataUrl("https://myserver.local:8443/img.png");
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://myserver.local:8443/img.png",
-      expect.objectContaining({
-        danger: expect.objectContaining({ acceptInvalidCerts: true }),
-      }),
-    );
+    expect(fetchMock).toHaveBeenCalledWith("https://myserver.local:8443/img.png");
 
     fetchMock.mockReset();
     clearAttachmentCaches();
@@ -432,8 +426,7 @@ describe("fetchImageAsDataUrl — network fetch failure", () => {
       arrayBuffer: () => Promise.resolve(new Uint8Array([1]).buffer),
     });
 
-    // Fetch a third-party URL
     await fetchImageAsDataUrl("https://cdn.example.com/img.png");
-    expect(fetchMock).toHaveBeenCalledWith("https://cdn.example.com/img.png", {});
+    expect(fetchMock).toHaveBeenCalledWith("https://cdn.example.com/img.png");
   });
 });

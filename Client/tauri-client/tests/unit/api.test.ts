@@ -425,25 +425,11 @@ describe("API Client", () => {
       expect(fetchCallOpts().signal).toBe(controller.signal);
     });
 
-    it("does not set danger.acceptInvalidCerts without allowSelfSigned", async () => {
+    it("does not set TLS bypass options during TOTP verification", async () => {
       mockFetch.mockResolvedValue(jsonResponse({ token: "t", user: { id: 1 } }));
       await api.verifyTotp("123456", "pt");
       const opts = fetchCallOpts();
       expect((opts as Record<string, unknown>).danger).toBeUndefined();
-    });
-
-    it("sets danger.acceptInvalidCerts when allowSelfSigned is true", async () => {
-      const selfSignedApi = createApiClient(
-        { host: "localhost:8443", token: "test-token", allowSelfSigned: true },
-        onUnauthorized,
-      );
-      mockFetch.mockResolvedValue(jsonResponse({ token: "t", user: { id: 1 } }));
-      await selfSignedApi.verifyTotp("123456", "pt");
-      const opts = fetchCallOpts();
-      expect((opts as Record<string, unknown>).danger).toEqual({
-        acceptInvalidCerts: true,
-        acceptInvalidHostnames: false,
-      });
     });
   });
 
@@ -702,23 +688,10 @@ describe("API Client", () => {
       setTimeoutSpy.mockRestore();
     });
 
-    it("getHealth does not set danger without allowSelfSigned", async () => {
+    it("getHealth does not set TLS bypass options", async () => {
       mockFetch.mockResolvedValue(jsonResponse({ status: "ok", version: "1.0.0", uptime: 0 }));
       await api.getHealth();
       expect((fetchCallOpts() as Record<string, unknown>).danger).toBeUndefined();
-    });
-
-    it("getHealth sets danger.acceptInvalidCerts when allowSelfSigned", async () => {
-      const selfSignedApi = createApiClient(
-        { host: "localhost:8443", token: "test-token", allowSelfSigned: true },
-        onUnauthorized,
-      );
-      mockFetch.mockResolvedValue(jsonResponse({ status: "ok", version: "1.0.0", uptime: 0 }));
-      await selfSignedApi.getHealth();
-      expect((fetchCallOpts() as Record<string, unknown>).danger).toEqual({
-        acceptInvalidCerts: true,
-        acceptInvalidHostnames: false,
-      });
     });
   });
 
@@ -820,24 +793,11 @@ describe("API Client", () => {
     });
   });
 
-  describe("doFetch danger option", () => {
-    it("regular requests without allowSelfSigned do not set danger", async () => {
+  describe("doFetch TLS handling", () => {
+    it("regular requests do not set danger", async () => {
       mockFetch.mockResolvedValue(jsonResponse({}));
       await api.getMe();
       expect((fetchCallOpts() as Record<string, unknown>).danger).toBeUndefined();
-    });
-
-    it("requests with allowSelfSigned set danger.acceptInvalidCerts", async () => {
-      const selfSignedApi = createApiClient(
-        { host: "localhost:8443", token: "test-token", allowSelfSigned: true },
-        onUnauthorized,
-      );
-      mockFetch.mockResolvedValue(jsonResponse({}));
-      await selfSignedApi.getMe();
-      expect((fetchCallOpts() as Record<string, unknown>).danger).toEqual({
-        acceptInvalidCerts: true,
-        acceptInvalidHostnames: false,
-      });
     });
   });
 

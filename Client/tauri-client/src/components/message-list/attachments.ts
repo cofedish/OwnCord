@@ -226,17 +226,8 @@ export function fetchImageAsDataUrl(url: string): Promise<string | null> {
     }
 
     // 4. Network fetch via Tauri HTTP plugin
-    // acceptInvalidCerts is required for self-hosted OwnCord servers with self-signed
-    // TLS certificates. This means the client will accept any certificate from any server
-    // for image fetching, which could enable SSRF to internal endpoints via malicious
-    // chat messages containing internal URLs. Mitigated by: (1) isSafeUrl only allows
-    // http/https, (2) responses are only used as image data, not executed.
     try {
-      const useInsecure = isServerUrl(url);
-      const fetchOpts: RequestInit = useInsecure
-        ? ({ danger: { acceptInvalidCerts: true, acceptInvalidHostnames: false } } as RequestInit)
-        : {};
-      const res = await tauriFetch(url, fetchOpts);
+      const res = await tauriFetch(url);
       if (!res.ok) return null;
 
       const rawCt = res.headers.get("content-type") ?? "";
@@ -396,12 +387,7 @@ async function downloadFile(url: string, filename: string): Promise<void> {
     const filePath = await save({ defaultPath: filename });
     if (filePath === null) return; // User cancelled
 
-    // Fetch file data — only accept invalid certs for the OwnCord server
-    const useInsecure = isServerUrl(url);
-    const fetchOpts: RequestInit = useInsecure
-      ? ({ danger: { acceptInvalidCerts: true, acceptInvalidHostnames: false } } as RequestInit)
-      : {};
-    const res = await tauriFetch(url, fetchOpts);
+    const res = await tauriFetch(url);
     if (!res.ok) {
       log.error("Download failed", { filename, status: res.status });
       alert(`Download failed: server returned ${res.status}`);

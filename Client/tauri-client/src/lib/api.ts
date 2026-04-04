@@ -1,5 +1,4 @@
 // Step 2.13 — REST API Client
-// Uses Tauri's HTTP plugin fetch to bypass self-signed cert rejection in webview.
 
 import { fetch } from "@tauri-apps/plugin-http";
 import { createLogger } from "./logger";
@@ -27,8 +26,6 @@ import type {
 export interface ApiClientConfig {
   readonly host: string;
   readonly token?: string;
-  /** Accept self-signed TLS certificates (for local/dev OwnCord servers). */
-  readonly allowSelfSigned?: boolean;
 }
 
 /** API client error with parsed error body. */
@@ -84,15 +81,10 @@ export function createApiClient(initialConfig: ApiClientConfig, onUnauthorized?:
     signal?: AbortSignal,
   ): Promise<T> {
     const url = `${urlBase}${path}`;
-    const init: RequestInit & {
-      danger?: { acceptInvalidCerts: boolean; acceptInvalidHostnames: boolean };
-    } = {
+    const init: RequestInit = {
       method,
       headers: headers(),
       signal,
-      ...(config.allowSelfSigned === true
-        ? { danger: { acceptInvalidCerts: true, acceptInvalidHostnames: false } }
-        : {}),
     };
     if (body !== undefined) {
       init.body = JSON.stringify(body);
@@ -221,9 +213,7 @@ export function createApiClient(initialConfig: ApiClientConfig, onUnauthorized?:
     ): Promise<AuthResponse> {
       // Don't mutate shared config — make direct fetch with the partial token
       const url = `${baseUrl()}/auth/verify-totp`;
-      const init: RequestInit & {
-        danger?: { acceptInvalidCerts: boolean; acceptInvalidHostnames: boolean };
-      } = {
+      const init: RequestInit = {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -231,9 +221,6 @@ export function createApiClient(initialConfig: ApiClientConfig, onUnauthorized?:
         },
         body: JSON.stringify({ code }),
         signal,
-        ...(config.allowSelfSigned === true
-          ? { danger: { acceptInvalidCerts: true, acceptInvalidHostnames: false } }
-          : {}),
       };
 
       let res: Response;
@@ -382,9 +369,6 @@ export function createApiClient(initialConfig: ApiClientConfig, onUnauthorized?:
         headers: h,
         body: formData,
         signal,
-        ...(config.allowSelfSigned === true
-          ? { danger: { acceptInvalidCerts: true, acceptInvalidHostnames: false } }
-          : {}),
       } as RequestInit);
 
       if (!res.ok) {
@@ -464,9 +448,6 @@ export function createApiClient(initialConfig: ApiClientConfig, onUnauthorized?:
       try {
         const res = await fetch(`https://${targetHost}/api/v1/health`, {
           signal: controller.signal,
-          ...(config.allowSelfSigned === true
-            ? { danger: { acceptInvalidCerts: true, acceptInvalidHostnames: false } }
-            : {}),
         } as RequestInit);
         if (!res.ok) {
           throw new ApiClientError(res.status, "HEALTH_CHECK_FAILED", "Health check failed");
