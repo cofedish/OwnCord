@@ -18,8 +18,8 @@
 
 A self-hosted chat platform with real-time messaging,
 voice/video, file sharing, and a web admin panel. This fork
-server and keep everything under your control — zero cloud
-dependencies, works fully on LAN.
+lets you run your own server and keep everything under your
+control — zero cloud dependencies, works fully on LAN.
 
 This fork changes the deployment story substantially:
 
